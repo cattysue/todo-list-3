@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by code-review
+last_updated: 2026-06-01  # updated by create-story
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
