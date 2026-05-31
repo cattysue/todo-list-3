@@ -50,12 +50,8 @@ development_status:
   1-4-대시보드에서-할일-완료-처리: done
   epic-1-retrospective: optional
 
-  # Epic 2: 스마트 마감 알림
-  epic-2: backlog
-  2-1-이메일-알림-스케줄링-인프라-구축: backlog
-  2-2-마감-임박-이메일-알림-발송: backlog
-  2-3-알림-개인화-설정-페이지: backlog
-  epic-2-retrospective: optional
+  # Epic 2: 스마트 마감 알림 (제거됨)
+  # epic-2, 2-1, 2-2, 2-3 — 이메일 알림 기능 전체 제거
 
   # Epic 3: 할일 검색 및 고급 필터링
   epic-3: backlog
