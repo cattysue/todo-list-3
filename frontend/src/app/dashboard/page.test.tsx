@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import DashboardPage from './page';
 import * as useDashboardHook from '@/hooks/useDashboard';
+import * as useCompleteTodoHook from '@/hooks/useCompleteTodo';
 
 jest.mock('@/hooks/useDashboard');
+jest.mock('@/hooks/useCompleteTodo');
 
 const mockDashboardData = {
   overdue: [
@@ -35,6 +37,14 @@ const mockDashboardData = {
   this_week: [],
 };
 
+const mockCompleteTodoReturn = {
+  mutate: jest.fn(),
+  isPending: false,
+  variables: undefined as string | undefined,
+  isSuccess: false,
+  isError: false,
+};
+
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -45,6 +55,13 @@ function renderWithQuery(ui: React.ReactElement) {
 }
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    (useCompleteTodoHook.useCompleteTodo as jest.Mock).mockReturnValue({
+      ...mockCompleteTodoReturn,
+      mutate: jest.fn(),
+    });
+  });
+
   afterEach(() => jest.resetAllMocks());
 
   it('isLoading 상태에서 스켈레톤 UI를 표시한다 (overdue 제외 3개 섹션)', () => {
@@ -228,5 +245,49 @@ describe('DashboardPage', () => {
     expect(
       overdue.compareDocumentPosition(today) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it('체크박스 클릭 시 completeTodo mutate가 해당 id로 호출된다 (AC: 1)', () => {
+    const mutateFn = jest.fn();
+    (useCompleteTodoHook.useCompleteTodo as jest.Mock).mockReturnValue({
+      ...mockCompleteTodoReturn,
+      mutate: mutateFn,
+    });
+    (useDashboardHook.useDashboard as jest.Mock).mockReturnValue({
+      data: mockDashboardData,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderWithQuery(React.createElement(DashboardPage));
+
+    const todayCheckbox = screen.getByRole('checkbox', { name: '오늘 마감 할일 완료 처리' });
+    fireEvent.click(todayCheckbox);
+    expect(mutateFn).toHaveBeenCalledWith('t1');
+  });
+
+  it('isPending 중인 항목의 체크박스가 비활성화된다 (AC: 4)', () => {
+    (useCompleteTodoHook.useCompleteTodo as jest.Mock).mockReturnValue({
+      ...mockCompleteTodoReturn,
+      isPending: true,
+      variables: 't1',
+    });
+    (useDashboardHook.useDashboard as jest.Mock).mockReturnValue({
+      data: mockDashboardData,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    renderWithQuery(React.createElement(DashboardPage));
+
+    expect(
+      screen.getByRole('checkbox', { name: '오늘 마감 할일 완료 처리' }),
+    ).toBeDisabled();
+    // isPending 중이면 모든 섹션의 체크박스가 비활성화됨
+    expect(
+      screen.getByRole('checkbox', { name: '기한 초과 할일 완료 처리' }),
+    ).toBeDisabled();
   });
 });

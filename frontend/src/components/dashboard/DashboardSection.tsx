@@ -5,6 +5,8 @@ interface DashboardSectionProps {
   items: TodoDashboardItem[];
   emptyMessage?: string;
   titleClassName?: string;
+  onComplete?: (id: string) => void;
+  completingId?: string | null;
 }
 
 export function DashboardSection({
@@ -12,6 +14,8 @@ export function DashboardSection({
   items,
   emptyMessage,
   titleClassName,
+  onComplete,
+  completingId,
 }: DashboardSectionProps) {
   return (
     <>
@@ -23,8 +27,16 @@ export function DashboardSection({
       ) : (
         <ul>
           {items.map((item) => (
-            <li key={item.id} className="py-1 border-b border-gray-100">
-              {item.title}
+            <li key={item.id} className="py-1 border-b border-gray-100 flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={completingId === item.id}
+                disabled={!!completingId}
+                onChange={() => onComplete?.(item.id)}
+                aria-label={`${item.title} 완료 처리`}
+                className="w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <span>{item.title}</span>
             </li>
           ))}
         </ul>

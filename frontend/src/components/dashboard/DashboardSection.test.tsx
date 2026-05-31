@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { DashboardSection } from './DashboardSection';
 import type { TodoDashboardItem } from '@/types/dashboard';
@@ -72,5 +72,69 @@ describe('DashboardSection', () => {
     );
     const heading = screen.getByText('제목');
     expect(heading.className).toBe('text-lg font-semibold mb-2');
+  });
+
+  it('각 항목에 체크박스가 렌더링된다 (AC: 1)', () => {
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'i1', title: '할일 A' })],
+      }),
+    );
+    expect(screen.getByRole('checkbox', { name: '할일 A 완료 처리' })).toBeInTheDocument();
+  });
+
+  it('체크박스 클릭 시 onComplete가 해당 id로 호출된다 (AC: 1)', () => {
+    const onComplete = jest.fn();
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'item-42', title: '할일 B' })],
+        onComplete,
+      }),
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: '할일 B 완료 처리' }));
+    expect(onComplete).toHaveBeenCalledWith('item-42');
+  });
+
+  it('completingId가 해당 item.id와 일치하면 체크박스가 disabled된다 (AC: 4)', () => {
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'target-id', title: '진행 중 할일' })],
+        completingId: 'target-id',
+      }),
+    );
+    expect(
+      screen.getByRole('checkbox', { name: '진행 중 할일 완료 처리' }),
+    ).toBeDisabled();
+  });
+
+  it('completingId가 null이면 체크박스가 disabled되지 않는다 (AC: 4)', () => {
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'other-id', title: '다른 할일' })],
+        completingId: null,
+      }),
+    );
+    expect(
+      screen.getByRole('checkbox', { name: '다른 할일 완료 처리' }),
+    ).not.toBeDisabled();
+  });
+
+  it('completingId가 설정되면 모든 항목의 체크박스가 disabled된다 (AC: 4 — 동시 클릭 방지)', () => {
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [
+          makeItem({ id: 'item-1', title: '할일 1' }),
+          makeItem({ id: 'item-2', title: '할일 2' }),
+        ],
+        completingId: 'item-1',
+      }),
+    );
+    expect(screen.getByRole('checkbox', { name: '할일 1 완료 처리' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: '할일 2 완료 처리' })).toBeDisabled();
   });
 });

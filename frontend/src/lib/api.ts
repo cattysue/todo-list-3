@@ -36,3 +36,37 @@ export async function getDashboardTodos(): Promise<DashboardResponse> {
 
   return res.json() as Promise<DashboardResponse>;
 }
+
+export async function completeTodo(todoId: string): Promise<void> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('인증이 필요합니다.');
+  }
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/todos/${todoId}`,
+    {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ is_completed: true }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`완료 처리 오류: ${res.status}`);
+  }
+}

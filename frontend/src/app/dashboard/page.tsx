@@ -1,6 +1,7 @@
 'use client';
 
 import { useDashboard } from '@/hooks/useDashboard';
+import { useCompleteTodo } from '@/hooks/useCompleteTodo';
 import { OverdueSection } from '@/components/dashboard/OverdueSection';
 import { TodaySection } from '@/components/dashboard/TodaySection';
 import { TomorrowSection } from '@/components/dashboard/TomorrowSection';
@@ -9,6 +10,7 @@ import DashboardLoading from './loading';
 
 export default function DashboardPage() {
   const { data, isLoading, isError } = useDashboard();
+  const { mutate: completeTodo, isPending, variables } = useCompleteTodo();
 
   if (isLoading) return <DashboardLoading />;
 
@@ -16,6 +18,8 @@ export default function DashboardPage() {
   const today = data?.today ?? [];
   const tomorrow = data?.tomorrow ?? [];
   const thisWeek = data?.this_week ?? [];
+
+  const completingId = isPending ? (variables ?? null) : null;
 
   return (
     <main className="max-w-2xl mx-auto p-4">
@@ -26,17 +30,33 @@ export default function DashboardPage() {
       )}
       {overdue.length > 0 && (
         <section data-testid="section-overdue" className="mb-6">
-          <OverdueSection items={overdue} />
+          <OverdueSection
+            items={overdue}
+            onComplete={completeTodo}
+            completingId={completingId}
+          />
         </section>
       )}
       <section data-testid="section-today" className="mb-6">
-        <TodaySection items={today} />
+        <TodaySection
+          items={today}
+          onComplete={completeTodo}
+          completingId={completingId}
+        />
       </section>
       <section data-testid="section-tomorrow" className="mb-6">
-        <TomorrowSection items={tomorrow} />
+        <TomorrowSection
+          items={tomorrow}
+          onComplete={completeTodo}
+          completingId={completingId}
+        />
       </section>
       <section data-testid="section-this_week" className="mb-6">
-        <WeekSection items={thisWeek} />
+        <WeekSection
+          items={thisWeek}
+          onComplete={completeTodo}
+          completingId={completingId}
+        />
       </section>
     </main>
   );
