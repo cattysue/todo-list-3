@@ -1,18 +1,21 @@
 'use client';
 
 import { useDashboard } from '@/hooks/useDashboard';
-import type { TodoDashboardItem } from '@/types/dashboard';
+import { OverdueSection } from '@/components/dashboard/OverdueSection';
+import { TodaySection } from '@/components/dashboard/TodaySection';
+import { TomorrowSection } from '@/components/dashboard/TomorrowSection';
+import { WeekSection } from '@/components/dashboard/WeekSection';
 import DashboardLoading from './loading';
-import { SECTIONS, type SectionKey } from './sections';
 
 export default function DashboardPage() {
   const { data, isLoading, isError } = useDashboard();
 
   if (isLoading) return <DashboardLoading />;
 
-  function getItems(key: SectionKey): TodoDashboardItem[] {
-    return data?.[key] ?? [];
-  }
+  const overdue = data?.overdue ?? [];
+  const today = data?.today ?? [];
+  const tomorrow = data?.tomorrow ?? [];
+  const thisWeek = data?.this_week ?? [];
 
   return (
     <main className="max-w-2xl mx-auto p-4">
@@ -21,18 +24,20 @@ export default function DashboardPage() {
           데이터를 불러오는 중 오류가 발생했습니다.
         </p>
       )}
-      {SECTIONS.map(({ key, label }) => (
-        <section key={key} data-testid={`section-${key}`} className="mb-6">
-          <h2 className="text-lg font-semibold mb-2">{label}</h2>
-          <ul>
-            {getItems(key).map((item) => (
-              <li key={item.id} className="py-1 border-b border-gray-100">
-                {item.title}
-              </li>
-            ))}
-          </ul>
+      {overdue.length > 0 && (
+        <section data-testid="section-overdue" className="mb-6">
+          <OverdueSection items={overdue} />
         </section>
-      ))}
+      )}
+      <section data-testid="section-today" className="mb-6">
+        <TodaySection items={today} />
+      </section>
+      <section data-testid="section-tomorrow" className="mb-6">
+        <TomorrowSection items={tomorrow} />
+      </section>
+      <section data-testid="section-this_week" className="mb-6">
+        <WeekSection items={thisWeek} />
+      </section>
     </main>
   );
 }
