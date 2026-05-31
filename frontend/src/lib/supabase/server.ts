@@ -14,10 +14,17 @@ export async function createClient() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
             );
-          } catch {
-            // cookieStore is read-only in Server Component contexts.
-            // setAll is called only during token refresh; the session remains
-            // readable via getAll() so the request still succeeds.
+          } catch (error) {
+            // Server Component contexts expose a read-only cookies() store.
+            // Token-refresh writes silently fail here; the session remains
+            // readable via getAll() so the current request still succeeds.
+            // Log anything other than the expected read-only error so it surfaces.
+            if (
+              !(error instanceof Error) ||
+              !error.message.includes('Cookies can only be modified')
+            ) {
+              console.error('[supabase/server] unexpected setAll error:', error);
+            }
           }
         },
       },

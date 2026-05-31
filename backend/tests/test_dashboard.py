@@ -45,6 +45,7 @@ def _mock_supabase(rows: list[dict]) -> MagicMock:
         .eq.return_value
         .eq.return_value
         .not_.is_.return_value
+        .gte.return_value
         .lte.return_value
         .execute.return_value
     ) = MagicMock(data=rows)

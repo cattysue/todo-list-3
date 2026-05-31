@@ -64,7 +64,7 @@ describe('DashboardPage', () => {
 
   afterEach(() => jest.resetAllMocks());
 
-  it('isLoading 상태에서 스켈레톤 UI를 표시한다 (overdue 제외 3개 섹션)', () => {
+  it('isLoading 상태에서 스켈레톤 UI를 표시한다 (overdue 포함 4개 섹션)', () => {
     (useDashboardHook.useDashboard as jest.Mock).mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -74,8 +74,8 @@ describe('DashboardPage', () => {
 
     renderWithQuery(React.createElement(DashboardPage));
 
-    // overdue 스켈레톤은 CLS 방지를 위해 제외됨
-    expect(screen.queryByLabelText('기한 초과 로딩 중')).not.toBeInTheDocument();
+    // 모든 섹션 스켈레톤이 렌더링되어 데이터 로드 후 CLS를 방지한다
+    expect(screen.getByLabelText('기한 초과 로딩 중')).toBeInTheDocument();
     expect(screen.getByLabelText('오늘 마감 로딩 중')).toBeInTheDocument();
     expect(screen.getByLabelText('내일 마감 로딩 중')).toBeInTheDocument();
     expect(screen.getByLabelText('이번 주 마감 로딩 중')).toBeInTheDocument();

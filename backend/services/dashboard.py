@@ -46,13 +46,15 @@ def _build_item(row: dict[str, Any]) -> TodoDashboardItem:
 def get_dashboard_todos(user_id: str, supabase) -> DashboardResponse:
     today, tomorrow, this_week_end = _get_week_boundaries()
 
-    # Server-side date filter: only fetch overdue + this-week todos (no unbounded history).
+    # Fetch overdue + this-week todos. Lower bound: 90 days back to cap historical data.
+    cutoff = str(today - timedelta(days=90))
     response = (
         supabase.table("todos")
         .select("*, categories(name)")
         .eq("user_id", user_id)
         .eq("is_completed", False)
         .not_.is_("due_date", "null")
+        .gte("due_date", cutoff)
         .lte("due_date", str(this_week_end))
         .execute()
     )
@@ -88,8 +90,11 @@ def get_dashboard_todos(user_id: str, supabase) -> DashboardResponse:
     overdue.sort(key=lambda t: _coerce_date(t.due_date) or date.min)
 
     # today: priority DESC, then created_at ASC
+    # Use a tz-aware sentinel so the sort never mixes naive/aware datetimes
+    # (Supabase returns UTC-aware timestamps; naive datetime.min raises TypeError).
+    _TZ_MIN = datetime.min.replace(tzinfo=timezone.utc)
     today_items.sort(
-        key=lambda t: (-PRIORITY_ORDER.get(t.priority or "", 0), t.created_at or datetime.min)
+        key=lambda t: (-PRIORITY_ORDER.get(t.priority or "", 0), t.created_at or _TZ_MIN)
     )
 
     return DashboardResponse(

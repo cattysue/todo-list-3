@@ -1,8 +1,4 @@
-const LOADING_SECTIONS = [
-  { key: 'today', label: '오늘 마감' },
-  { key: 'tomorrow', label: '내일 마감' },
-  { key: 'this_week', label: '이번 주 마감' },
-] as const;
+import { SECTIONS } from './sections';
 
 function SectionSkeleton({ title }: { title: string }) {
   return (
@@ -22,7 +18,7 @@ function SectionSkeleton({ title }: { title: string }) {
 export default function DashboardLoading() {
   return (
     <main className="max-w-2xl mx-auto p-4">
-      {LOADING_SECTIONS.map(({ key, label }) => (
+      {SECTIONS.map(({ key, label }) => (
         <SectionSkeleton key={key} title={label} />
       ))}
     </main>

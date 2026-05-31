@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/client';
 import type { DashboardResponse } from '@/types/dashboard';
 
-export async function getDashboardTodos(): Promise<DashboardResponse> {
+async function getAccessToken(): Promise<string> {
   const supabase = createClient();
 
-  // getUser() validates the JWT with Supabase's auth server (not just local storage)
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -12,7 +11,6 @@ export async function getDashboardTodos(): Promise<DashboardResponse> {
     throw new Error('인증이 필요합니다.');
   }
 
-  // getSession() provides the access_token to forward to the backend
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -20,11 +18,17 @@ export async function getDashboardTodos(): Promise<DashboardResponse> {
     throw new Error('인증이 필요합니다.');
   }
 
+  return session.access_token;
+}
+
+export async function getDashboardTodos(): Promise<DashboardResponse> {
+  const token = await getAccessToken();
+
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/todos/dashboard`,
     {
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     },
@@ -38,28 +42,14 @@ export async function getDashboardTodos(): Promise<DashboardResponse> {
 }
 
 export async function completeTodo(todoId: string): Promise<void> {
-  const supabase = createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    throw new Error('인증이 필요합니다.');
-  }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('인증이 필요합니다.');
-  }
+  const token = await getAccessToken();
 
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_URL}/todos/${todoId}`,
     {
       method: 'PATCH',
       headers: {
-        Authorization: `Bearer ${session.access_token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ is_completed: true }),

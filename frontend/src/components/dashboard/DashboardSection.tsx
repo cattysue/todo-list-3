@@ -5,6 +5,8 @@ interface DashboardSectionProps {
   items: TodoDashboardItem[];
   emptyMessage?: string;
   titleClassName?: string;
+  itemBorderClassName?: string;
+  showCategoryName?: boolean;
   onComplete?: (id: string) => void;
   completingId?: string | null;
 }
@@ -14,6 +16,8 @@ export function DashboardSection({
   items,
   emptyMessage,
   titleClassName,
+  itemBorderClassName = 'border-gray-100',
+  showCategoryName = false,
   onComplete,
   completingId,
 }: DashboardSectionProps) {
@@ -27,7 +31,7 @@ export function DashboardSection({
       ) : (
         <ul>
           {items.map((item) => (
-            <li key={item.id} className="py-1 border-b border-gray-100 flex items-center gap-2">
+            <li key={item.id} className={`py-1 border-b ${itemBorderClassName} flex items-center gap-2`}>
               <input
                 type="checkbox"
                 checked={completingId === item.id}
@@ -37,6 +41,9 @@ export function DashboardSection({
                 className="w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <span>{item.title}</span>
+              {showCategoryName && item.category_name && (
+                <span className="text-sm text-gray-500 ml-2">{item.category_name}</span>
+              )}
             </li>
           ))}
         </ul>
