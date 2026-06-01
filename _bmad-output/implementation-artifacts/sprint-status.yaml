@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by dev-story (story 6.2 review)
+last_updated: 2026-06-01  # updated manually (epic-6 retrospective done)
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -68,13 +68,13 @@ development_status:
   epic-4-retrospective: optional
 
   # Epic 5: 캘린더 뷰
-  epic-5: in-progress
-  5-1-캘린더-뷰-페이지-구현: review
-  5-2-드래그로-마감일-변경: review
+  epic-5: done
+  5-1-캘린더-뷰-페이지-구현: done
+  5-2-드래그로-마감일-변경: done
   epic-5-retrospective: optional
 
   # Epic 6: 생산성 통계
-  epic-6: in-progress
-  6-1-주간-월간-완료율-통계-차트: review
-  6-2-카테고리별-완료율-분析: review
-  epic-6-retrospective: optional
+  epic-6: done
+  6-1-주간-월간-완료율-통계-차트: done
+  6-2-카테고리별-완료율-분析: done
+  epic-6-retrospective: done
