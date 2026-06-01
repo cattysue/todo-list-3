@@ -27,10 +27,11 @@ export function CompletionChart({ data }: Props) {
           <YAxis yAxisId="left" allowDecimals={false} />
           <YAxis yAxisId="right" orientation="right" unit="%" domain={[0, 100]} />
           <Tooltip
-            formatter={(value: number, name: string) => {
-              if (name === '완료율') return [`${value}%`, name];
-              return [value, name];
-            }}
+            formatter={(value: number | undefined, name: string) => {
+            if (value === undefined) return ['', name];
+            if (name === '완료율') return [`${value}%`, name];
+            return [value, name];
+          }}
           />
           <Legend />
           <Bar yAxisId="left" dataKey="completed_count" name="완료 개수" fill="#3b82f6" />
