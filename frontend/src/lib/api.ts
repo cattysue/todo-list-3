@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { DashboardResponse, TodoDashboardItem } from '@/types/dashboard';
 import type { CategoryItem, SearchFilters } from '@/types/filters';
+import type { TodoItem, CreateTodoRequest, UpdateTodoRequest } from '@/types/todos';
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -109,4 +110,45 @@ export async function getCategories(): Promise<CategoryItem[]> {
   }
 
   return res.json() as Promise<CategoryItem[]>;
+}
+
+export async function createTodo(data: CreateTodoRequest): Promise<TodoItem> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/todos`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(`할일 생성 오류: ${res.status}`);
+  }
+
+  return res.json() as Promise<TodoItem>;
+}
+
+export async function updateTodo(
+  id: string,
+  data: UpdateTodoRequest,
+): Promise<TodoItem> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/todos/${id}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    throw new Error(`할일 수정 오류: ${res.status}`);
+  }
+
+  return res.json() as Promise<TodoItem>;
 }

@@ -5,8 +5,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from schemas.dashboard import TodoDashboardItem
-from schemas.todo import TodoUpdateRequest, TodoUpdateResponse
+from schemas.todo import (
+    TodoUpdateRequest,
+    TodoUpdateResponse,
+    TodoCreateRequest,
+    TodoContentUpdateRequest,
+    TodoCreateResponse,
+)
 from services.search import search_todos as search_todos_service
+from services.todos import create_todo, update_todo_content
 from dependencies import get_current_user, get_supabase, require_user_id
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -34,6 +41,55 @@ def search_todos(
         is_completed=is_completed,
         category_id=category_id,
     )
+
+
+@router.post("", response_model=TodoCreateResponse, status_code=status.HTTP_201_CREATED)
+def create_todo_endpoint(
+    body: TodoCreateRequest,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = require_user_id(current_user)
+    row = create_todo(
+        user_id=user_id,
+        supabase=supabase,
+        title=body.title,
+        category_id=body.category_id,
+        priority=body.priority,
+        due_date=body.due_date,
+        recurrence_type=body.recurrence_type,
+        recurrence_days=body.recurrence_days,
+        recurrence_day_of_month=body.recurrence_day_of_month,
+    )
+    return row
+
+
+@router.put("/{todo_id}", response_model=TodoCreateResponse)
+def update_todo_content_endpoint(
+    todo_id: str,
+    body: TodoContentUpdateRequest,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = require_user_id(current_user)
+    row = update_todo_content(
+        todo_id=todo_id,
+        user_id=user_id,
+        supabase=supabase,
+        title=body.title,
+        category_id=body.category_id,
+        priority=body.priority,
+        due_date=body.due_date,
+        recurrence_type=body.recurrence_type,
+        recurrence_days=body.recurrence_days,
+        recurrence_day_of_month=body.recurrence_day_of_month,
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="할일을 찾을 수 없습니다.",
+        )
+    return row
 
 
 @router.patch("/{todo_id}", response_model=TodoUpdateResponse)

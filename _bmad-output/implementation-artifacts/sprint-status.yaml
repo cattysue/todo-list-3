@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by create-story (story 3.2)
+last_updated: 2026-06-01  # updated by create-story (story 4.1)
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -54,14 +54,14 @@ development_status:
   # epic-2, 2-1, 2-2, 2-3 — 이메일 알림 기능 전체 제거
 
   # Epic 3: 할일 검색 및 고급 필터링
-  epic-3: in-progress
+  epic-3: done
   3-1-키워드-실시간-검색: done
   3-2-고급-복합-필터링: done
   epic-3-retrospective: optional
 
   # Epic 4: 반복 할일 자동화 + 템플릿
-  epic-4: backlog
-  4-1-반복-주기-설정: backlog
+  epic-4: in-progress
+  4-1-반복-주기-설정: review
   4-2-반복-할일-자동-재생성: backlog
   4-3-반복-유연-제어: backlog
   4-4-할일-묶음-템플릿: backlog
