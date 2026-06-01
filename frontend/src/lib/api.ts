@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { DashboardResponse, TodoDashboardItem } from '@/types/dashboard';
 import type { CategoryItem, SearchFilters } from '@/types/filters';
+import type { Template, CreateTemplateRequest, ApplyTemplateRequest } from '@/types/templates';
 import type { TodoItem, CreateTodoRequest, UpdateTodoRequest } from '@/types/todos';
 
 async function getAccessToken(): Promise<string> {
@@ -190,4 +191,50 @@ export async function updateTodo(
   }
 
   return res.json() as Promise<TodoItem>;
+}
+
+export async function getTemplates(): Promise<Template[]> {
+  const token = await getAccessToken();
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/templates`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`템플릿 조회 오류: ${res.status}`);
+  return res.json() as Promise<Template[]>;
+}
+
+export async function createTemplate(data: CreateTemplateRequest): Promise<Template> {
+  const token = await getAccessToken();
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/templates`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`템플릿 생성 오류: ${res.status}`);
+  return res.json() as Promise<Template>;
+}
+
+export async function deleteTemplate(templateId: string): Promise<void> {
+  const token = await getAccessToken();
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/templates/${templateId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`템플릿 삭제 오류: ${res.status}`);
+}
+
+export async function applyTemplate(
+  templateId: string,
+  data: ApplyTemplateRequest,
+): Promise<TodoItem[]> {
+  const token = await getAccessToken();
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/templates/${templateId}/apply`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    },
+  );
+  if (!res.ok) throw new Error(`템플릿 적용 오류: ${res.status}`);
+  return res.json() as Promise<TodoItem[]>;
 }

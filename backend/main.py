@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import dashboard, todos, categories
+from routers import dashboard, todos, categories, templates
 
 # NOTE: import existing routers (todos, categories) from your current main.py
 # and add the dashboard router alongside them as shown below.
@@ -24,3 +24,4 @@ app.add_middleware(
 app.include_router(dashboard.router)
 app.include_router(todos.router)
 app.include_router(categories.router)
+app.include_router(templates.router)

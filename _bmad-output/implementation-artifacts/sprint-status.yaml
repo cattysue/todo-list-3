@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by dev-story (story 4.3 review)
+last_updated: 2026-06-01  # updated by dev-story (story 4.4 review)
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -64,7 +64,7 @@ development_status:
   4-1-반복-주기-설정: done
   4-2-반복-할일-자동-재생성: review
   4-3-반복-유연-제어: review
-  4-4-할일-묶음-템플릿: backlog
+  4-4-할일-묶음-템플릿: review
   epic-4-retrospective: optional
 
   # Epic 5: 캘린더 뷰

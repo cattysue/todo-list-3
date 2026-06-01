@@ -11,4 +11,7 @@ export const queryKeys = {
   categories: {
     all: ['categories'] as const,
   },
+  templates: {
+    all: ['templates'] as const,
+  },
 } as const;
