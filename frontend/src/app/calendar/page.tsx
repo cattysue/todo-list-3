@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { DndContext, type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { useCalendar } from '@/hooks/useCalendar';
 import { useDragDueDate } from '@/hooks/useDragDueDate';
 import { MonthView } from '@/components/calendar/MonthView';
@@ -26,12 +26,15 @@ export default function CalendarPage() {
     [view, currentDate],
   );
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
   const { data: todos = [], isLoading, isError } = useCalendar(range.start, range.end);
   const dragDueDate = useDragDueDate();
 
   const todosByDate = useMemo(() => {
     const map: Record<string, TodoCalendarItem[]> = {};
     for (const todo of todos) {
+      if (!todo.due_date) continue;
       const key = todo.due_date.slice(0, 10);
       if (!map[key]) map[key] = [];
       map[key].push(todo);
@@ -43,24 +46,17 @@ export default function CalendarPage() {
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over) return;
+    if (!over || dragDueDate.isPending) return;
 
     const todoId = String(active.id);
     const newDueDate = String(over.id);
 
-    let previousDueDate: string | null = null;
-    for (const [dateStr, items] of Object.entries(todosByDate)) {
-      if (items.some((t) => t.id === todoId)) {
-        previousDueDate = dateStr;
-        break;
-      }
-    }
+    const previousDueDate = todos.find((t) => t.id === todoId)?.due_date?.slice(0, 10) ?? null;
     if (!previousDueDate || previousDueDate === newDueDate) return;
 
     dragDueDate.mutate({
       todoId,
       newDueDate,
-      previousDueDate,
       calendarStart: range.start,
       calendarEnd: range.end,
     });
@@ -133,7 +129,7 @@ export default function CalendarPage() {
         </p>
       )}
 
-      <DndContext onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className={['flex gap-4', selectedDate ? 'items-start' : ''].join(' ')}>
           <div className={selectedDate ? 'flex-1' : 'w-full'}>
             {view === 'month' ? (

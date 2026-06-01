@@ -27,10 +27,9 @@ export function DayCell({ date, todos, isCurrentMonth, isToday, isSelected, onCl
       onClick={() => onClick(dateStr)}
       className={[
         'min-h-20 p-1 cursor-pointer border rounded text-sm transition-colors',
-        isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400',
-        isToday ? 'border-blue-500' : 'border-gray-200',
+        isOver ? 'bg-blue-50' : isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400',
+        isOver ? 'border-blue-400' : isToday ? 'border-blue-500' : 'border-gray-200',
         isSelected ? 'ring-2 ring-blue-400' : '',
-        isOver ? 'bg-blue-50 border-blue-400' : '',
       ].join(' ')}
     >
       <span className={['font-semibold text-xs', isToday ? 'text-blue-600' : ''].join(' ')}>

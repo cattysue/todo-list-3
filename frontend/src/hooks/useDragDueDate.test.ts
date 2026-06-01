@@ -41,7 +41,6 @@ function createWrapper() {
 const dragVars = {
   todoId: 'todo-1',
   newDueDate: '2026-06-15',
-  previousDueDate: '2026-06-10',
   calendarStart: START,
   calendarEnd: END,
 };
@@ -56,7 +55,7 @@ describe('useDragDueDate', () => {
   });
 
   it('성공 시 캘린더 캐시에서 해당 할일의 due_date가 새 날짜로 변경된다', async () => {
-    (api.updateTodoDueDate as jest.Mock).mockResolvedValue(undefined);
+    (api.updateTodo as jest.Mock).mockResolvedValue(undefined);
 
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(() => useDragDueDate(), { wrapper });
@@ -75,7 +74,7 @@ describe('useDragDueDate', () => {
   });
 
   it('성공 시 queryKeys.todos.all을 invalidate한다', async () => {
-    (api.updateTodoDueDate as jest.Mock).mockResolvedValue(undefined);
+    (api.updateTodo as jest.Mock).mockResolvedValue(undefined);
 
     const { queryClient, wrapper } = createWrapper();
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
@@ -93,7 +92,7 @@ describe('useDragDueDate', () => {
   });
 
   it('실패 시 이전 캘린더 캐시로 롤백된다', async () => {
-    (api.updateTodoDueDate as jest.Mock).mockRejectedValue(new Error('네트워크 오류'));
+    (api.updateTodo as jest.Mock).mockRejectedValue(new Error('네트워크 오류'));
 
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(() => useDragDueDate(), { wrapper });
@@ -112,7 +111,7 @@ describe('useDragDueDate', () => {
   });
 
   it('실패 시 한국어 에러 알림을 표시한다', async () => {
-    (api.updateTodoDueDate as jest.Mock).mockRejectedValue(new Error('네트워크 오류'));
+    (api.updateTodo as jest.Mock).mockRejectedValue(new Error('네트워크 오류'));
 
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useDragDueDate(), { wrapper });

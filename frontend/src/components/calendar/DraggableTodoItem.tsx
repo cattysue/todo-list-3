@@ -25,7 +25,6 @@ export function DraggableTodoItem({ todo }: Props) {
       style={style}
       {...listeners}
       {...attributes}
-      onClick={(e) => e.stopPropagation()}
       className={[
         'truncate text-xs px-1 rounded cursor-grab active:cursor-grabbing',
         todo.is_completed
