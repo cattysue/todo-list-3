@@ -10,7 +10,7 @@ app = FastAPI(title="todo-list-3 API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[""https://todo-list-3-production-7d03.up.railway.app",
+    allow_origins=["https://todo-list-3-production-7d03.up.railway.app",
     "http://localhost:3000",],  # tighten in production
     allow_credentials=True,
     allow_methods=["*"],
