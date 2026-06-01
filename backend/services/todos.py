@@ -12,23 +12,20 @@ def create_todo(
     recurrence_days: Optional[str] = None,
     recurrence_day_of_month: Optional[int] = None,
 ) -> dict:
+    optional: dict[str, Any] = {
+        "category_id": category_id,
+        "priority": priority,
+        "due_date": due_date,
+        "recurrence_type": recurrence_type,
+        "recurrence_days": recurrence_days,
+        "recurrence_day_of_month": recurrence_day_of_month,
+    }
     data: dict[str, Any] = {
         "user_id": user_id,
         "title": title,
         "is_completed": False,
+        **{k: v for k, v in optional.items() if v is not None},
     }
-    if category_id is not None:
-        data["category_id"] = category_id
-    if priority is not None:
-        data["priority"] = priority
-    if due_date is not None:
-        data["due_date"] = due_date
-    if recurrence_type is not None:
-        data["recurrence_type"] = recurrence_type
-    if recurrence_days is not None:
-        data["recurrence_days"] = recurrence_days
-    if recurrence_day_of_month is not None:
-        data["recurrence_day_of_month"] = recurrence_day_of_month
 
     response = (
         supabase.table("todos")

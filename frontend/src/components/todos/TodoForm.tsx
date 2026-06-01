@@ -218,7 +218,7 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
             <div className="flex gap-1">
               {DAY_LABELS.map((label, idx) => (
                 <button
-                  key={idx}
+                  key={label}
                   type="button"
                   onClick={() => toggleDay(idx)}
                   disabled={isPending}
