@@ -1,11 +1,26 @@
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from schemas.dashboard import TodoDashboardItem
 from schemas.todo import TodoUpdateRequest, TodoUpdateResponse
+from services.search import search_todos as search_todos_service
 from dependencies import get_current_user, get_supabase
 
 router = APIRouter(prefix="/todos", tags=["todos"])
+
+
+@router.get("/search", response_model=list[TodoDashboardItem])
+def search_todos(
+    q: Optional[str] = None,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = getattr(current_user, "id", None) or getattr(current_user, "sub", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    return search_todos_service(user_id=user_id, supabase=supabase, q=q)
 
 
 @router.patch("/{todo_id}", response_model=TodoUpdateResponse)

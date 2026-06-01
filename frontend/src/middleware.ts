@@ -35,7 +35,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  if ((pathname === '/' || pathname.startsWith('/dashboard')) && !user) {
+  if (
+    !user &&
+    (pathname === '/' ||
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/search'))
+  ) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -43,5 +48,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/dashboard', '/dashboard/:path*'],
+  matcher: ['/', '/dashboard', '/dashboard/:path*', '/search', '/search/:path*'],
 };

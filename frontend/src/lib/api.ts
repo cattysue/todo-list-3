@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import type { DashboardResponse } from '@/types/dashboard';
+import type { DashboardResponse, TodoDashboardItem } from '@/types/dashboard';
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -59,4 +59,24 @@ export async function completeTodo(todoId: string): Promise<void> {
   if (!res.ok) {
     throw new Error(`완료 처리 오류: ${res.status}`);
   }
+}
+
+export async function searchTodos(q: string): Promise<TodoDashboardItem[]> {
+  const token = await getAccessToken();
+  const url = q
+    ? `${process.env.NEXT_PUBLIC_API_URL}/todos/search?q=${encodeURIComponent(q)}`
+    : `${process.env.NEXT_PUBLIC_API_URL}/todos/search`;
+
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`검색 오류: ${res.status}`);
+  }
+
+  return res.json() as Promise<TodoDashboardItem[]>;
 }

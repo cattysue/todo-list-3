@@ -3,5 +3,6 @@ export const queryKeys = {
     all: ['todos'] as const,
     dashboard: () => ['todos', 'dashboard'] as const,
     byCategory: (id: string) => ['todos', 'category', id] as const,
+    search: (q: string) => ['todos', 'search', q] as const,
   },
 } as const;

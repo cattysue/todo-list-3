@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by code-review
+last_updated: 2026-06-01  # updated by create-story
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -54,8 +54,8 @@ development_status:
   # epic-2, 2-1, 2-2, 2-3 — 이메일 알림 기능 전체 제거
 
   # Epic 3: 할일 검색 및 고급 필터링
-  epic-3: backlog
-  3-1-키워드-실시간-검색: backlog
+  epic-3: in-progress
+  3-1-키워드-실시간-검색: review
   3-2-고급-복합-필터링: backlog
   epic-3-retrospective: optional
 
