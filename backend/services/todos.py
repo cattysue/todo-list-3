@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from services.recurring import calculate_next_due_date
@@ -81,7 +82,7 @@ def update_todo_content(
 
 
 _COMPLETE_SELECT = (
-    "id, is_completed, title, category_id, priority, created_at,"
+    "id, is_completed, title, category_id, priority, created_at, completed_at,"
     " recurrence_type, recurrence_days, recurrence_day_of_month, recurrence_paused"
 )
 
@@ -89,7 +90,10 @@ _COMPLETE_SELECT = (
 def complete_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
     result = (
         supabase.table("todos")
-        .update({"is_completed": True})
+        .update({
+            "is_completed": True,
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+        })
         .eq("id", todo_id)
         .eq("user_id", user_id)
         .eq("is_completed", False)  # 이미 완료된 할일은 건너뜀 — 중복 재생성 방지
@@ -208,6 +212,7 @@ def _normalize_row(row: dict) -> dict:
         "priority": row.get("priority"),
         "is_completed": row.get("is_completed", False),
         "created_at": str(row["created_at"]) if row.get("created_at") else None,
+        "completed_at": str(row["completed_at"]) if row.get("completed_at") else None,
         "category_id": row.get("category_id"),
         "category_name": category_name,
         "recurrence_type": row.get("recurrence_type"),

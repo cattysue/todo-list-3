@@ -15,4 +15,8 @@ export const queryKeys = {
   templates: {
     all: ['templates'] as const,
   },
+  stats: {
+    all: ['stats'] as const,
+    completion: (period: string, count: number) => ['stats', 'completion', period, count] as const,
+  },
 } as const;

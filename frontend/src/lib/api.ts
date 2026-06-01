@@ -4,6 +4,7 @@ import type { CategoryItem, SearchFilters } from '@/types/filters';
 import type { Template, CreateTemplateRequest, ApplyTemplateRequest } from '@/types/templates';
 import type { TodoItem, CreateTodoRequest, UpdateTodoRequest } from '@/types/todos';
 import type { TodoCalendarItem } from '@/types/calendar';
+import type { CompletionStatsResponse, StatsPeriod } from '@/types/stats';
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -238,6 +239,20 @@ export async function applyTemplate(
   );
   if (!res.ok) throw new Error(`템플릿 적용 오류: ${res.status}`);
   return res.json() as Promise<TodoItem[]>;
+}
+
+export async function getCompletionStats(
+  period: StatsPeriod,
+  count: number,
+): Promise<CompletionStatsResponse> {
+  const token = await getAccessToken();
+  const params = new URLSearchParams({ period, count: String(count) });
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/stats/completion?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`통계 조회 오류: ${res.status}`);
+  return res.json() as Promise<CompletionStatsResponse>;
 }
 
 export async function getCalendarTodos(

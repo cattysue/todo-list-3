@@ -48,6 +48,7 @@ export function useCompleteTodo() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
     },
   });
 }

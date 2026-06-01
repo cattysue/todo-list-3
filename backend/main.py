@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import dashboard, todos, categories, templates, calendar
+from routers import dashboard, todos, categories, templates, calendar, stats
 
 # NOTE: import existing routers (todos, categories) from your current main.py
 # and add the dashboard router alongside them as shown below.
@@ -26,3 +26,4 @@ app.include_router(calendar.router)   # calendar before todos — /todos/calenda
 app.include_router(todos.router)
 app.include_router(categories.router)
 app.include_router(templates.router)
+app.include_router(stats.router)
