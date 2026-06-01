@@ -18,5 +18,6 @@ export const queryKeys = {
   stats: {
     all: ['stats'] as const,
     completion: (period: string, count: number) => ['stats', 'completion', period, count] as const,
+    category: () => ['stats', 'category'] as const,
   },
 } as const;

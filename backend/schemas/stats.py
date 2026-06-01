@@ -13,3 +13,15 @@ class PeriodData(BaseModel):
 class CompletionStatsResponse(BaseModel):
     period: Literal["weekly", "monthly"]
     data: list[PeriodData]
+
+
+class CategoryStatData(BaseModel):
+    category_id: str
+    category_name: str
+    total_count: int
+    completed_count: int
+    completion_rate: float
+
+
+class CategoryStatsResponse(BaseModel):
+    data: list[CategoryStatData]

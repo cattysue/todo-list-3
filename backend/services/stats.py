@@ -73,6 +73,57 @@ def get_completion_stats(
     return {"period": period, "data": result}
 
 
+def get_category_stats(user_id: str, supabase) -> dict:
+    """
+    카테고리별 완료율을 집계한다.
+    category_id가 NULL인 할일은 제외한다.
+    할일이 없는 카테고리는 결과에서 제외된다.
+    완료율 내림차순으로 정렬하여 반환한다.
+    """
+    rows = (
+        supabase.table("todos")
+        .select("id, is_completed, category_id, categories(name)")
+        .eq("user_id", user_id)
+        .execute()
+        .data
+    ) or []
+
+    category_map: dict[str, dict] = {}
+    for row in rows:
+        cat_id = row.get("category_id")
+        if not cat_id:
+            continue
+        cats = row.get("categories")
+        cat_name = cats.get("name") if isinstance(cats, dict) else cat_id
+        if cat_id not in category_map:
+            category_map[cat_id] = {
+                "category_id": cat_id,
+                "category_name": cat_name,
+                "total_count": 0,
+                "completed_count": 0,
+            }
+        category_map[cat_id]["total_count"] += 1
+        if row.get("is_completed"):
+            category_map[cat_id]["completed_count"] += 1
+
+    result = []
+    for data in category_map.values():
+        total = data["total_count"]
+        completed = data["completed_count"]
+        raw_rate = completed / total * 100 if total > 0 else 0.0
+        rate = round(min(100.0, raw_rate), 1)
+        result.append({
+            "category_id": data["category_id"],
+            "category_name": data["category_name"],
+            "total_count": total,
+            "completed_count": completed,
+            "completion_rate": rate,
+        })
+
+    result.sort(key=lambda x: x["completion_rate"], reverse=True)
+    return {"data": result}
+
+
 def _parse_dt(dt_str: str) -> datetime:
     """ISO 문자열 → timezone-aware datetime."""
     dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))

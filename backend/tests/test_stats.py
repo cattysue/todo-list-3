@@ -1,12 +1,12 @@
 """
-Tests for stats service: get_completion_stats, _build_periods, _parse_dt.
+Tests for stats service: get_completion_stats, get_category_stats, _build_periods, _parse_dt.
 """
 from datetime import datetime, timezone, timedelta
 from unittest.mock import MagicMock
 
 import pytest
 
-from services.stats import get_completion_stats, _build_periods, _parse_dt
+from services.stats import get_completion_stats, get_category_stats, _build_periods, _parse_dt
 
 
 # ---------------------------------------------------------------------------
@@ -218,3 +218,92 @@ def test_get_completion_stats_no_due_date_todos_counted():
     result = get_completion_stats("user-1", supabase, "weekly", 8)
     last = result["data"][-1]
     assert last["completed_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# get_category_stats helpers
+# ---------------------------------------------------------------------------
+
+def _make_supabase_category(data):
+    """단일 쿼리를 실행하는 Supabase mock (get_category_stats 전용)."""
+    mock = MagicMock()
+    inner = MagicMock()
+    inner.select.return_value = inner
+    inner.eq.return_value = inner
+    inner.execute.return_value = _make_execute_result(data)
+    mock.table.return_value = inner
+    return mock
+
+
+# ---------------------------------------------------------------------------
+# get_category_stats
+# ---------------------------------------------------------------------------
+
+def test_category_stats_single():
+    """카테고리 1개, 할일 3개(완료 2/미완료 1) → completion_rate=66.7%."""
+    rows = [
+        {"id": "1", "is_completed": True,  "category_id": "cat-1", "categories": {"name": "업무"}},
+        {"id": "2", "is_completed": True,  "category_id": "cat-1", "categories": {"name": "업무"}},
+        {"id": "3", "is_completed": False, "category_id": "cat-1", "categories": {"name": "업무"}},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert len(result["data"]) == 1
+    item = result["data"][0]
+    assert item["category_id"] == "cat-1"
+    assert item["category_name"] == "업무"
+    assert item["total_count"] == 3
+    assert item["completed_count"] == 2
+    assert item["completion_rate"] == 66.7
+
+
+def test_category_stats_multiple_sorted():
+    """카테고리 2개: 완료율 높은 것이 먼저 정렬된다."""
+    rows = [
+        {"id": "1", "is_completed": True,  "category_id": "cat-a", "categories": {"name": "운동"}},
+        {"id": "2", "is_completed": False, "category_id": "cat-a", "categories": {"name": "운동"}},
+        {"id": "3", "is_completed": True,  "category_id": "cat-b", "categories": {"name": "공부"}},
+        {"id": "4", "is_completed": True,  "category_id": "cat-b", "categories": {"name": "공부"}},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert len(result["data"]) == 2
+    # cat-b: 100%, cat-a: 50% → cat-b 먼저
+    assert result["data"][0]["category_id"] == "cat-b"
+    assert result["data"][0]["completion_rate"] == 100.0
+    assert result["data"][1]["category_id"] == "cat-a"
+    assert result["data"][1]["completion_rate"] == 50.0
+
+
+def test_category_stats_excludes_no_category():
+    """category_id가 None인 할일은 집계에서 제외된다."""
+    rows = [
+        {"id": "1", "is_completed": True,  "category_id": None,    "categories": None},
+        {"id": "2", "is_completed": True,  "category_id": "cat-1", "categories": {"name": "업무"}},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert len(result["data"]) == 1
+    assert result["data"][0]["category_id"] == "cat-1"
+    assert result["data"][0]["total_count"] == 1
+
+
+def test_category_stats_empty():
+    """할일이 없으면 빈 목록을 반환한다."""
+    result = get_category_stats("user-1", _make_supabase_category([]))
+    assert result["data"] == []
+
+
+def test_category_stats_rate_capped_at_100():
+    """completed_count가 total_count를 초과하더라도 완료율은 100.0을 넘지 않는다."""
+    rows = [
+        {"id": "1", "is_completed": True, "category_id": "cat-1", "categories": {"name": "업무"}},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert result["data"][0]["completion_rate"] <= 100.0
+
+
+def test_category_stats_categories_join():
+    """categories 딕셔너리에서 category_name이 올바르게 추출된다."""
+    rows = [
+        {"id": "1", "is_completed": False, "category_id": "cat-xyz", "categories": {"name": "취미"}},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert result["data"][0]["category_name"] == "취미"
