@@ -153,41 +153,45 @@ def control_recurrence(todo_id: str, user_id: str, action: str, supabase) -> Opt
         return {"id": todo_id, "action": action}
 
     if action == "pause":
-        update_todo_content(
+        updated = update_todo_content(
             todo_id=todo_id,
             user_id=user_id,
             supabase=supabase,
             updates={"recurrence_paused": True},
         )
+        if updated is None:
+            return None
         return {"id": todo_id, "action": action}
 
     if action == "resume":
-        update_todo_content(
-            todo_id=todo_id,
-            user_id=user_id,
-            supabase=supabase,
-            updates={"recurrence_paused": False},
-        )
+        if not todo.get("recurrence_paused"):
+            return {"id": todo_id, "action": action}  # 이미 활성 상태 — 멱등 no-op
+        # 현재 인스턴스는 recurrence_paused=True 유지 — complete_todo에서 재생성 차단
+        # (unpaused로 바꾸면 완료 시 complete_todo가 또 다음 인스턴스를 생성해 중복 발생)
         next_due = calculate_next_due_date(
             recurrence_type=todo["recurrence_type"],
             recurrence_days=todo.get("recurrence_days"),
             recurrence_day_of_month=todo.get("recurrence_day_of_month"),
         )
-        create_todo(
-            user_id=user_id,
-            supabase=supabase,
-            title=todo["title"],
-            category_id=todo.get("category_id"),
-            priority=todo.get("priority"),
-            due_date=next_due,
-            recurrence_type=todo["recurrence_type"],
-            recurrence_days=todo.get("recurrence_days"),
-            recurrence_day_of_month=todo.get("recurrence_day_of_month"),
-        )
+        try:
+            create_todo(
+                user_id=user_id,
+                supabase=supabase,
+                title=todo["title"],
+                category_id=todo.get("category_id"),
+                priority=todo.get("priority"),
+                due_date=next_due,
+                recurrence_type=todo["recurrence_type"],
+                recurrence_days=todo.get("recurrence_days"),
+                recurrence_day_of_month=todo.get("recurrence_day_of_month"),
+            )
+        except Exception as e:
+            logger.warning("resume 다음 인스턴스 생성 실패 (todo_id=%s): %s", todo_id, e, exc_info=True)
+            return None
         return {"id": todo_id, "action": action}
 
     if action == "end":
-        update_todo_content(
+        updated = update_todo_content(
             todo_id=todo_id,
             user_id=user_id,
             supabase=supabase,
@@ -198,6 +202,8 @@ def control_recurrence(todo_id: str, user_id: str, action: str, supabase) -> Opt
                 "recurrence_paused": False,
             },
         )
+        if updated is None:
+            return None
         return {"id": todo_id, "action": action}
 
     return None

@@ -67,15 +67,17 @@ export function DashboardSection({
                   </button>
                   {openMenuId === item.id && (
                     <div className="absolute right-0 top-full z-10 bg-white border border-gray-200 rounded shadow-md min-w-32">
-                      <button
-                        onClick={() => {
-                          onRecurrenceAction?.(item.id, 'skip');
-                          setOpenMenuId(null);
-                        }}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
-                      >
-                        이번만 건너뛰기
-                      </button>
+                      {!item.recurrence_paused && (
+                        <button
+                          onClick={() => {
+                            onRecurrenceAction?.(item.id, 'skip');
+                            setOpenMenuId(null);
+                          }}
+                          className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                        >
+                          이번만 건너뛰기
+                        </button>
+                      )}
                       {item.recurrence_paused ? (
                         <button
                           onClick={() => {

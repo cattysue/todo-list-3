@@ -125,6 +125,34 @@ describe('DashboardSection', () => {
     ).not.toBeDisabled();
   });
 
+  it('일시 중지 상태에서는 이번만 건너뛰기 버튼이 표시되지 않는다 (AC: 3)', () => {
+    const onRecurrenceAction = jest.fn();
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'i1', recurrence_type: 'daily', recurrence_paused: true })],
+        onRecurrenceAction,
+      }),
+    );
+    fireEvent.click(screen.getByLabelText('반복 옵션'));
+    expect(screen.queryByText('이번만 건너뛰기')).not.toBeInTheDocument();
+    expect(screen.getByText('재개')).toBeInTheDocument();
+  });
+
+  it('활성 상태에서는 이번만 건너뛰기 버튼이 표시된다 (AC: 2)', () => {
+    const onRecurrenceAction = jest.fn();
+    render(
+      React.createElement(DashboardSection, {
+        title: '섹션',
+        items: [makeItem({ id: 'i1', recurrence_type: 'daily', recurrence_paused: false })],
+        onRecurrenceAction,
+      }),
+    );
+    fireEvent.click(screen.getByLabelText('반복 옵션'));
+    expect(screen.getByText('이번만 건너뛰기')).toBeInTheDocument();
+    expect(screen.getByText('일시 중지')).toBeInTheDocument();
+  });
+
   it('completingId가 설정되면 모든 항목의 체크박스가 disabled된다 (AC: 4 — 동시 클릭 방지)', () => {
     render(
       React.createElement(DashboardSection, {

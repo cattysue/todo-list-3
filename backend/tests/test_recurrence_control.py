@@ -117,12 +117,13 @@ def test_control_recurrence_pause_sets_paused_flag():
     )
 
 
-def test_control_recurrence_resume_unpauses_and_creates_next():
+def test_control_recurrence_resume_creates_next_and_keeps_current_paused():
+    """resume: 다음 인스턴스 생성 + 현재 인스턴스는 recurrence_paused=True 유지 (중복 방지)."""
     todo = _make_recurring_todo(recurrence_paused=True)
     mock_sb = MagicMock()
 
     with patch("services.todos.get_todo", return_value=todo), \
-         patch("services.todos.update_todo_content", return_value={}) as mock_update, \
+         patch("services.todos.update_todo_content") as mock_update, \
          patch("services.todos.calculate_next_due_date", return_value="2026-06-02") as mock_calc, \
          patch("services.todos.create_todo", return_value={}) as mock_create:
         from services.todos import control_recurrence
@@ -131,16 +132,28 @@ def test_control_recurrence_resume_unpauses_and_creates_next():
         )
 
     assert result == {"id": "todo-1", "action": "resume"}
-    mock_update.assert_called_once_with(
-        todo_id="todo-1",
-        user_id="user-123",
-        supabase=mock_sb,
-        updates={"recurrence_paused": False},
-    )
+    # 현재 인스턴스 unpaused 처리 금지 — complete_todo 중복 재생성 차단 목적
+    mock_update.assert_not_called()
     mock_calc.assert_called_once()
     mock_create.assert_called_once()
     create_kwargs = mock_create.call_args[1]
     assert create_kwargs["due_date"] == "2026-06-02"
+
+
+def test_control_recurrence_resume_on_active_todo_is_noop():
+    """이미 활성 상태(recurrence_paused=False)인 할일에 resume → 인스턴스 생성 없이 성공 반환."""
+    todo = _make_recurring_todo(recurrence_paused=False)
+    mock_sb = MagicMock()
+
+    with patch("services.todos.get_todo", return_value=todo), \
+         patch("services.todos.create_todo") as mock_create:
+        from services.todos import control_recurrence
+        result = control_recurrence(
+            todo_id="todo-1", user_id="user-123", action="resume", supabase=mock_sb
+        )
+
+    assert result == {"id": "todo-1", "action": "resume"}
+    mock_create.assert_not_called()
 
 
 def test_control_recurrence_end_clears_recurrence_fields():
@@ -189,6 +202,52 @@ def test_control_recurrence_non_recurring_returns_none():
         from services.todos import control_recurrence
         result = control_recurrence(
             todo_id="todo-1", user_id="user-123", action="pause", supabase=mock_sb
+        )
+
+    assert result is None
+
+
+def test_control_recurrence_pause_concurrent_delete_returns_none():
+    """pause 중 할일이 동시 삭제됐을 때(update_todo_content → None) → None 반환."""
+    todo = _make_recurring_todo()
+    mock_sb = MagicMock()
+
+    with patch("services.todos.get_todo", return_value=todo), \
+         patch("services.todos.update_todo_content", return_value=None):
+        from services.todos import control_recurrence
+        result = control_recurrence(
+            todo_id="todo-1", user_id="user-123", action="pause", supabase=mock_sb
+        )
+
+    assert result is None
+
+
+def test_control_recurrence_end_concurrent_delete_returns_none():
+    """end 중 할일이 동시 삭제됐을 때(update_todo_content → None) → None 반환."""
+    todo = _make_recurring_todo()
+    mock_sb = MagicMock()
+
+    with patch("services.todos.get_todo", return_value=todo), \
+         patch("services.todos.update_todo_content", return_value=None):
+        from services.todos import control_recurrence
+        result = control_recurrence(
+            todo_id="todo-1", user_id="user-123", action="end", supabase=mock_sb
+        )
+
+    assert result is None
+
+
+def test_control_recurrence_resume_spawn_failure_returns_none():
+    """resume 시 create_todo 실패 → None 반환 (DB 상태 변경 없음)."""
+    todo = _make_recurring_todo(recurrence_paused=True)
+    mock_sb = MagicMock()
+
+    with patch("services.todos.get_todo", return_value=todo), \
+         patch("services.todos.calculate_next_due_date", return_value="2026-06-02"), \
+         patch("services.todos.create_todo", side_effect=Exception("DB error")):
+        from services.todos import control_recurrence
+        result = control_recurrence(
+            todo_id="todo-1", user_id="user-123", action="resume", supabase=mock_sb
         )
 
     assert result is None
