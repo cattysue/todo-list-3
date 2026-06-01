@@ -131,6 +131,20 @@ export async function createTodo(data: CreateTodoRequest): Promise<TodoItem> {
   return res.json() as Promise<TodoItem>;
 }
 
+export async function getTodo(id: string): Promise<TodoItem> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/todos/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    throw new Error(`할일 조회 오류: ${res.status}`);
+  }
+
+  return res.json() as Promise<TodoItem>;
+}
+
 export async function updateTodo(
   id: string,
   data: UpdateTodoRequest,

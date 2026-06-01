@@ -41,34 +41,26 @@ def create_todo(
     return _normalize_row(row)
 
 
+def get_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
+    response = (
+        supabase.table("todos")
+        .select("*, categories(name)")
+        .eq("id", todo_id)
+        .eq("user_id", user_id)
+        .single()
+        .execute()
+    )
+    if not response.data:
+        return None
+    return _normalize_row(response.data)
+
+
 def update_todo_content(
     todo_id: str,
     user_id: str,
     supabase,
-    title: Optional[str] = None,
-    category_id: Optional[str] = None,
-    priority: Optional[str] = None,
-    due_date: Optional[str] = None,
-    recurrence_type: Optional[str] = None,
-    recurrence_days: Optional[str] = None,
-    recurrence_day_of_month: Optional[int] = None,
+    updates: dict[str, Any],
 ) -> Optional[dict]:
-    updates: dict[str, Any] = {}
-    if title is not None:
-        updates["title"] = title
-    if category_id is not None:
-        updates["category_id"] = category_id
-    if priority is not None:
-        updates["priority"] = priority
-    if due_date is not None:
-        updates["due_date"] = due_date
-    if recurrence_type is not None:
-        updates["recurrence_type"] = recurrence_type
-    if recurrence_days is not None:
-        updates["recurrence_days"] = recurrence_days
-    if recurrence_day_of_month is not None:
-        updates["recurrence_day_of_month"] = recurrence_day_of_month
-
     if not updates:
         return None
 

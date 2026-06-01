@@ -8,6 +8,7 @@ import SearchBar from '@/components/todos/SearchBar';
 import FilterBar from '@/components/todos/FilterBar';
 import FilterTags from '@/components/todos/FilterTags';
 import TodoModal from '@/components/todos/TodoModal';
+import { getTodo } from '@/lib/api';
 import type { TodoDashboardItem } from '@/types/dashboard';
 import type { TodoItem } from '@/types/todos';
 import type { SearchFilters } from '@/types/filters';
@@ -15,9 +16,11 @@ import type { SearchFilters } from '@/types/filters';
 function SearchResultItem({
   item,
   onEdit,
+  isLoading,
 }: {
   item: TodoDashboardItem;
   onEdit: (item: TodoDashboardItem) => void;
+  isLoading: boolean;
 }) {
   const priorityLabel: Record<string, string> = {
     high: '높음',
@@ -44,10 +47,11 @@ function SearchResultItem({
         <button
           type="button"
           onClick={() => onEdit(item)}
-          className="shrink-0 p-1 text-gray-400 hover:text-blue-600 rounded transition-colors"
+          disabled={isLoading}
+          className="shrink-0 p-1 text-gray-400 hover:text-blue-600 rounded transition-colors disabled:opacity-50"
           aria-label="할일 수정"
         >
-          ✏️
+          {isLoading ? '⏳' : '✏️'}
         </button>
       </div>
     </li>
@@ -59,6 +63,7 @@ export default function SearchPage() {
   const [filters, setFilters] = useState<SearchFilters>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TodoItem | undefined>(undefined);
+  const [fetchingEditId, setFetchingEditId] = useState<string | null>(null);
 
   const { data: results = [], isFetching, isError, debouncedQuery } = useSearchTodos(
     query,
@@ -81,16 +86,24 @@ export default function SearchPage() {
     setModalOpen(true);
   };
 
-  const handleEdit = (item: TodoDashboardItem) => {
-    // TodoDashboardItem을 TodoItem으로 변환 (recurrence 필드는 null로 초기화)
-    const todoItem: TodoItem = {
-      ...item,
-      recurrence_type: null,
-      recurrence_days: null,
-      recurrence_day_of_month: null,
-    };
-    setEditTarget(todoItem);
-    setModalOpen(true);
+  const handleEdit = async (item: TodoDashboardItem) => {
+    setFetchingEditId(item.id);
+    try {
+      const fullTodo = await getTodo(item.id);
+      setEditTarget(fullTodo);
+      setModalOpen(true);
+    } catch {
+      // 조회 실패 시 recurrence null로 폼 열기 (사용자에게 수동 재입력 유도)
+      setEditTarget({
+        ...item,
+        recurrence_type: null,
+        recurrence_days: null,
+        recurrence_day_of_month: null,
+      });
+      setModalOpen(true);
+    } finally {
+      setFetchingEditId(null);
+    }
   };
 
   const handleModalClose = () => {
@@ -143,7 +156,7 @@ export default function SearchPage() {
         {!isFetching && !isError && results.length > 0 && (
           <ul className="divide-y divide-gray-100 bg-white rounded-lg border border-gray-200">
             {results.map((item) => (
-              <SearchResultItem key={item.id} item={item} onEdit={handleEdit} />
+              <SearchResultItem key={item.id} item={item} onEdit={handleEdit} isLoading={fetchingEditId === item.id} />
             ))}
           </ul>
         )}

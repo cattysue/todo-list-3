@@ -13,7 +13,7 @@ from schemas.todo import (
     TodoCreateResponse,
 )
 from services.search import search_todos as search_todos_service
-from services.todos import create_todo, update_todo_content
+from services.todos import create_todo, get_todo, update_todo_content
 from dependencies import get_current_user, get_supabase, require_user_id
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -41,6 +41,22 @@ def search_todos(
         is_completed=is_completed,
         category_id=category_id,
     )
+
+
+@router.get("/{todo_id}", response_model=TodoCreateResponse)
+def get_todo_endpoint(
+    todo_id: str,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = require_user_id(current_user)
+    row = get_todo(todo_id=todo_id, user_id=user_id, supabase=supabase)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="할일을 찾을 수 없습니다.",
+        )
+    return row
 
 
 @router.post("", response_model=TodoCreateResponse, status_code=status.HTTP_201_CREATED)
@@ -72,17 +88,17 @@ def update_todo_content_endpoint(
     supabase=Depends(get_supabase),
 ):
     user_id = require_user_id(current_user)
+    if not body.model_fields_set:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="업데이트할 필드가 없습니다.",
+        )
+    updates = {field: getattr(body, field) for field in body.model_fields_set}
     row = update_todo_content(
         todo_id=todo_id,
         user_id=user_id,
         supabase=supabase,
-        title=body.title,
-        category_id=body.category_id,
-        priority=body.priority,
-        due_date=body.due_date,
-        recurrence_type=body.recurrence_type,
-        recurrence_days=body.recurrence_days,
-        recurrence_day_of_month=body.recurrence_day_of_month,
+        updates=updates,
     )
     if row is None:
         raise HTTPException(

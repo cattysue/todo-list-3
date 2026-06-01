@@ -24,4 +24,12 @@ export interface CreateTodoRequest {
   recurrence_day_of_month?: number;
 }
 
-export type UpdateTodoRequest = Partial<CreateTodoRequest>;
+export interface UpdateTodoRequest {
+  title?: string;
+  category_id?: string | null;
+  priority?: 'high' | 'medium' | 'low' | null;
+  due_date?: string | null;
+  recurrence_type?: RecurrenceType | null;
+  recurrence_days?: string | null;
+  recurrence_day_of_month?: number | null;
+}

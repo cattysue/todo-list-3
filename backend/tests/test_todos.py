@@ -67,7 +67,7 @@ def _make_todo_row(
 
 
 def _make_router_client(fake_user=None, insert_row=None, update_rows=None,
-                         raise_server_exceptions=True):
+                         get_row=None, raise_server_exceptions=True):
     from fastapi.testclient import TestClient
     from fastapi import FastAPI
     from routers.todos import router
@@ -83,6 +83,8 @@ def _make_router_client(fake_user=None, insert_row=None, update_rows=None,
         app.dependency_overrides[get_supabase] = lambda: _mock_insert(insert_row)
     elif update_rows is not None:
         app.dependency_overrides[get_supabase] = lambda: _mock_update(update_rows)
+    elif get_row is not None:
+        app.dependency_overrides[get_supabase] = lambda: _mock_insert(get_row)
 
     return TestClient(app, raise_server_exceptions=raise_server_exceptions)
 
@@ -199,8 +201,7 @@ def test_update_todo_recurrence_to_weekly():
         todo_id="todo-1",
         user_id="user-123",
         supabase=mock,
-        recurrence_type="weekly",
-        recurrence_days="1,3",
+        updates={"recurrence_type": "weekly", "recurrence_days": "1,3"},
     )
 
     assert result["recurrence_type"] == "weekly"
@@ -215,7 +216,7 @@ def test_update_todo_content_title():
         todo_id="todo-1",
         user_id="user-123",
         supabase=mock,
-        title="수정된 제목",
+        updates={"title": "수정된 제목"},
     )
 
     assert result["title"] == "수정된 제목"
@@ -230,6 +231,7 @@ def test_update_todo_no_fields_returns_none():
         todo_id="todo-1",
         user_id="user-123",
         supabase=mock,
+        updates={},
     )
 
     assert result is None
@@ -243,7 +245,7 @@ def test_update_todo_not_found_returns_none():
         todo_id="nonexistent",
         user_id="user-123",
         supabase=mock,
-        title="제목",
+        updates={"title": "제목"},
     )
 
     assert result is None
@@ -257,12 +259,30 @@ def test_update_todo_filters_by_user_id():
         todo_id="todo-1",
         user_id="user-abc",
         supabase=mock,
-        title="수정",
+        updates={"title": "수정"},
     )
 
     eq_calls = [call[0] for call in mock.eq.call_args_list]
     assert ("id", "todo-1") in eq_calls
     assert ("user_id", "user-abc") in eq_calls
+
+
+def test_update_todo_clear_recurrence():
+    """recurrence_type=None(null)을 명시적으로 전달하면 DB에 NULL로 업데이트."""
+    updated_row = _make_todo_row(recurrence_type=None, recurrence_days=None)
+    mock = _mock_update([updated_row])
+
+    result = update_todo_content(
+        todo_id="todo-1",
+        user_id="user-123",
+        supabase=mock,
+        updates={"recurrence_type": None, "recurrence_days": None},
+    )
+
+    assert result["recurrence_type"] is None
+    update_payload = mock.update.call_args[0][0]
+    assert "recurrence_type" in update_payload
+    assert update_payload["recurrence_type"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +363,35 @@ def test_update_todo_router_404_when_not_found():
     assert response.status_code == 404
 
 
+def test_update_todo_router_422_empty_body():
+    """빈 바디 PUT은 422를 반환해야 함 (404가 아님)."""
+    client = _make_router_client(
+        fake_user=_make_user(),
+        update_rows=[],
+        raise_server_exceptions=False,
+    )
+
+    response = client.put("/todos/todo-1", json={})
+
+    assert response.status_code == 422
+
+
+def test_update_todo_router_clears_recurrence():
+    """recurrence_type: null 전송 시 DB에 NULL로 저장."""
+    cleared_row = _make_todo_row(recurrence_type=None, recurrence_days=None)
+    client = _make_router_client(fake_user=_make_user(), update_rows=[cleared_row])
+
+    response = client.put(
+        "/todos/todo-1",
+        json={"recurrence_type": None, "recurrence_days": None},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["recurrence_type"] is None
+    assert data["recurrence_days"] is None
+
+
 def test_update_todo_router_recurrence():
     updated_row = _make_todo_row(recurrence_type="monthly", recurrence_day_of_month=1)
     client = _make_router_client(fake_user=_make_user(), update_rows=[updated_row])
@@ -356,3 +405,46 @@ def test_update_todo_router_recurrence():
     data = response.json()
     assert data["recurrence_type"] == "monthly"
     assert data["recurrence_day_of_month"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Router — GET /todos/{id}
+# ---------------------------------------------------------------------------
+
+def test_get_todo_router_200():
+    row = _make_todo_row(title="운동하기", recurrence_type="weekly", recurrence_days="0,4")
+    client = _make_router_client(fake_user=_make_user(), get_row=row)
+
+    response = client.get("/todos/todo-1")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["title"] == "운동하기"
+    assert data["recurrence_type"] == "weekly"
+    assert data["recurrence_days"] == "0,4"
+
+
+def test_get_todo_router_404():
+    from unittest.mock import MagicMock
+
+    mock = MagicMock()
+    for method in ["table", "select", "eq", "single"]:
+        getattr(mock, method).return_value = mock
+    execute_result = MagicMock()
+    execute_result.data = None
+    mock.execute.return_value = execute_result
+
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from routers.todos import router
+    from dependencies import get_current_user, get_supabase
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_user] = lambda: _make_user()
+    app.dependency_overrides[get_supabase] = lambda: mock
+    client = TestClient(app, raise_server_exceptions=False)
+
+    response = client.get("/todos/nonexistent")
+
+    assert response.status_code == 404

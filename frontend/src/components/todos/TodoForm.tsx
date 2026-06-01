@@ -72,18 +72,34 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
       }
     }
 
+    // edit 모드: recurrence 필드를 항상 명시적으로 전송해 DB 값을 정확히 덮어씀
+    // create 모드: 값이 없으면 undefined로 생략 (DB 기본값 NULL 사용)
+    const recurrencePayload = isEdit
+      ? {
+          recurrence_type: (recurrenceType || null) as RecurrenceType | null,
+          recurrence_days:
+            recurrenceType === 'weekly' && selectedDays.length > 0
+              ? [...selectedDays].sort((a, b) => a - b).join(',')
+              : null,
+          recurrence_day_of_month:
+            recurrenceType === 'monthly' ? (dayOfMonthNum ?? null) : null,
+        }
+      : {
+          recurrence_type: (recurrenceType || undefined) as RecurrenceType | undefined,
+          recurrence_days:
+            recurrenceType === 'weekly' && selectedDays.length > 0
+              ? [...selectedDays].sort((a, b) => a - b).join(',')
+              : undefined,
+          recurrence_day_of_month:
+            recurrenceType === 'monthly' ? dayOfMonthNum : undefined,
+        };
+
     const payload = {
       title: title.trim(),
       category_id: categoryId || undefined,
       priority: (priority || undefined) as 'high' | 'medium' | 'low' | undefined,
       due_date: dueDate || undefined,
-      recurrence_type: (recurrenceType || undefined) as RecurrenceType | undefined,
-      recurrence_days:
-        recurrenceType === 'weekly' && selectedDays.length > 0
-          ? [...selectedDays].sort((a, b) => a - b).join(',')
-          : undefined,
-      recurrence_day_of_month:
-        recurrenceType === 'monthly' ? dayOfMonthNum : undefined,
+      ...recurrencePayload,
     };
 
     if (isEdit && initialData) {
