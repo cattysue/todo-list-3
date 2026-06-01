@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 interface Props {
-  templateId: string;
   onConfirm: (data: { base_date?: string }) => void;
   onClose: () => void;
 }

@@ -122,13 +122,14 @@ export function TemplateForm({ onSubmit, isSubmitting }: Props) {
               <input
                 type="number"
                 value={item.due_date_offset ?? ''}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
                   updateItem(
                     idx,
                     'due_date_offset',
-                    e.target.value === '' ? null : parseInt(e.target.value, 10),
-                  )
-                }
+                    e.target.value === '' || Number.isNaN(parsed) ? null : parsed,
+                  );
+                }}
                 placeholder="마감 오프셋(일)"
                 min={0}
                 className="w-28 border rounded px-2 py-1 text-sm"

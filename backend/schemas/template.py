@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Literal, Optional
 
 from pydantic import BaseModel
@@ -32,4 +33,4 @@ class TemplateResponse(BaseModel):
 
 
 class TemplateApplyRequest(BaseModel):
-    base_date: Optional[str] = None
+    base_date: Optional[date] = None

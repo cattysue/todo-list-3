@@ -44,10 +44,11 @@ export default function TemplatesPage() {
 
       {applyingTemplateId && (
         <ApplyTemplateModal
-          templateId={applyingTemplateId}
           onConfirm={(data) => {
-            applyTemplate.mutate({ templateId: applyingTemplateId, data });
-            setApplyingTemplateId(null);
+            applyTemplate.mutate(
+              { templateId: applyingTemplateId, data },
+              { onSuccess: () => setApplyingTemplateId(null) },
+            );
           }}
           onClose={() => setApplyingTemplateId(null)}
         />

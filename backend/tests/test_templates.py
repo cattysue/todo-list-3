@@ -3,6 +3,7 @@ Tests for templates service and /templates endpoints.
 
 Run with:  pytest backend/tests/test_templates.py -v
 """
+from datetime import date
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -145,7 +146,7 @@ def test_create_template_empty_items_skips_items_insert():
 
 def test_delete_template_returns_true_on_success():
     mock_sb = MagicMock()
-    mock_sb.table.return_value.delete.return_value.eq.return_value.eq.return_value.execute.return_value.data = [
+    mock_sb.table.return_value.delete.return_value.eq.return_value.eq.return_value.select.return_value.execute.return_value.data = [
         {"id": _TMPL_UUID}
     ]
 
@@ -157,7 +158,7 @@ def test_delete_template_returns_true_on_success():
 
 def test_delete_template_returns_false_on_not_found():
     mock_sb = MagicMock()
-    mock_sb.table.return_value.delete.return_value.eq.return_value.eq.return_value.execute.return_value.data = []
+    mock_sb.table.return_value.delete.return_value.eq.return_value.eq.return_value.select.return_value.execute.return_value.data = []
 
     from services.templates import delete_template
     result = delete_template(template_id=_TMPL_UUID, user_id=_USER_ID, supabase=mock_sb)
@@ -170,11 +171,11 @@ def test_delete_template_returns_false_on_not_found():
 # ---------------------------------------------------------------------------
 
 def _make_apply_mock_sb(template_data: dict | None) -> MagicMock:
-    """apply_template용 select().single() mock."""
+    """apply_template용 select().maybe_single() mock."""
     mock_sb = MagicMock()
     execute = MagicMock()
     execute.data = template_data
-    mock_sb.table.return_value.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = execute
+    mock_sb.table.return_value.select.return_value.eq.return_value.eq.return_value.maybe_single.return_value.execute.return_value = execute
     return mock_sb
 
 
@@ -192,12 +193,8 @@ def test_apply_template_today_uses_utc_date():
     tmpl = _make_template(items=[item])
     mock_sb = _make_apply_mock_sb(tmpl)
 
-    fixed_today = "2026-06-01"
-
     with patch("services.templates.datetime") as mock_dt, \
          patch("services.templates.create_todo", return_value={"id": "new-1", "title": "운동"}) as mock_create:
-        from datetime import date, timezone
-        mock_dt.now.return_value.date.return_value = date.fromisoformat(fixed_today)
         mock_dt.now.return_value.date.return_value = date(2026, 6, 1)
 
         from services.templates import apply_template
@@ -221,7 +218,7 @@ def test_apply_template_with_base_date():
         result = apply_template(
             template_id=_TMPL_UUID,
             user_id=_USER_ID,
-            base_date="2026-06-10",
+            base_date=date(2026, 6, 10),
             supabase=mock_sb,
         )
 
@@ -241,7 +238,7 @@ def test_apply_template_null_offset_no_due_date():
         result = apply_template(
             template_id=_TMPL_UUID,
             user_id=_USER_ID,
-            base_date="2026-06-01",
+            base_date=date(2026, 6, 1),
             supabase=mock_sb,
         )
 
@@ -279,7 +276,7 @@ def test_apply_template_sort_order_respected():
     with patch("services.templates.create_todo", side_effect=fake_create_todo):
         from services.templates import apply_template
         apply_template(
-            template_id=_TMPL_UUID, user_id=_USER_ID, base_date="2026-06-01", supabase=mock_sb
+            template_id=_TMPL_UUID, user_id=_USER_ID, base_date=date(2026, 6, 1), supabase=mock_sb
         )
 
     assert created_titles == ["첫번째", "두번째"]
