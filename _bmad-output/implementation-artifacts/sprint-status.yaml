@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by create-story
+last_updated: 2026-06-01  # updated by create-story (story 3.2)
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -56,7 +56,7 @@ development_status:
   # Epic 3: 할일 검색 및 고급 필터링
   epic-3: in-progress
   3-1-키워드-실시간-검색: done
-  3-2-고급-복합-필터링: backlog
+  3-2-고급-복합-필터링: review
   epic-3-retrospective: optional
 
   # Epic 4: 반복 할일 자동화 + 템플릿

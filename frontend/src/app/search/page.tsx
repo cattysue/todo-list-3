@@ -1,9 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { useSearchTodos } from '@/hooks/useSearchTodos';
+
+import { useSearchTodos, hasActiveFilters } from '@/hooks/useSearchTodos';
+import { useCategories } from '@/hooks/useCategories';
 import SearchBar from '@/components/todos/SearchBar';
+import FilterBar from '@/components/todos/FilterBar';
+import FilterTags from '@/components/todos/FilterTags';
 import type { TodoDashboardItem } from '@/types/dashboard';
+import type { SearchFilters } from '@/types/filters';
 
 function SearchResultItem({ item }: { item: TodoDashboardItem }) {
   const priorityLabel: Record<string, string> = {
@@ -35,13 +40,41 @@ function SearchResultItem({ item }: { item: TodoDashboardItem }) {
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
-  const { data: results = [], isFetching, isError, debouncedQuery } = useSearchTodos(query);
+  const [filters, setFilters] = useState<SearchFilters>({});
+
+  const { data: results = [], isFetching, isError, debouncedQuery } = useSearchTodos(
+    query,
+    filters,
+  );
+  const { data: categories = [] } = useCategories();
+
+  const isActive = !!debouncedQuery || hasActiveFilters(filters);
+
+  const handleRemoveFilter = (key: keyof SearchFilters) => {
+    setFilters((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
 
   return (
     <main className="p-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">할일 검색</h1>
 
       <SearchBar value={query} onChange={setQuery} />
+
+      <FilterBar
+        filters={filters}
+        onFilterChange={setFilters}
+        categories={categories}
+      />
+
+      <FilterTags
+        filters={filters}
+        categories={categories}
+        onRemove={handleRemoveFilter}
+      />
 
       <div className="mt-4">
         {isFetching && (
@@ -54,11 +87,11 @@ export default function SearchPage() {
           </p>
         )}
 
-        {!isFetching && !isError && debouncedQuery && results.length === 0 && (
+        {!isFetching && !isError && isActive && results.length === 0 && (
           <p className="text-gray-500 text-center py-8">검색 결과 없음</p>
         )}
 
-        {!isFetching && !isError && debouncedQuery && results.length > 0 && (
+        {!isFetching && !isError && results.length > 0 && (
           <ul className="divide-y divide-gray-100 bg-white rounded-lg border border-gray-200">
             {results.map((item) => (
               <SearchResultItem key={item.id} item={item} />

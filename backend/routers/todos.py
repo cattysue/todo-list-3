@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import date
+from typing import Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from schemas.dashboard import TodoDashboardItem
 from schemas.todo import TodoUpdateRequest, TodoUpdateResponse
 from services.search import search_todos as search_todos_service
-from dependencies import get_current_user, get_supabase
+from dependencies import get_current_user, get_supabase, require_user_id
 
 router = APIRouter(prefix="/todos", tags=["todos"])
 
@@ -14,13 +15,25 @@ router = APIRouter(prefix="/todos", tags=["todos"])
 @router.get("/search", response_model=list[TodoDashboardItem])
 def search_todos(
     q: Optional[str] = None,
+    priority: Optional[Literal["high", "medium", "low"]] = None,
+    due_date_from: Optional[date] = None,
+    due_date_to: Optional[date] = None,
+    is_completed: Optional[bool] = None,
+    category_id: Optional[str] = None,
     current_user=Depends(get_current_user),
     supabase=Depends(get_supabase),
 ):
-    user_id = getattr(current_user, "id", None) or getattr(current_user, "sub", None)
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    return search_todos_service(user_id=user_id, supabase=supabase, q=q)
+    user_id = require_user_id(current_user)
+    return search_todos_service(
+        user_id=user_id,
+        supabase=supabase,
+        q=q,
+        priority=priority,
+        due_date_from=due_date_from.isoformat() if due_date_from else None,
+        due_date_to=due_date_to.isoformat() if due_date_to else None,
+        is_completed=is_completed,
+        category_id=category_id,
+    )
 
 
 @router.patch("/{todo_id}", response_model=TodoUpdateResponse)
@@ -30,9 +43,7 @@ async def update_todo(
     current_user=Depends(get_current_user),
     supabase=Depends(get_supabase),
 ):
-    user_id = getattr(current_user, "id", None) or getattr(current_user, "sub", None)
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    user_id = require_user_id(current_user)
 
     result = (
         supabase.table("todos")

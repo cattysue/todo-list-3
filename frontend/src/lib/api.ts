@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import type { DashboardResponse, TodoDashboardItem } from '@/types/dashboard';
+import type { CategoryItem, SearchFilters } from '@/types/filters';
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -61,11 +62,23 @@ export async function completeTodo(todoId: string): Promise<void> {
   }
 }
 
-export async function searchTodos(q: string): Promise<TodoDashboardItem[]> {
+export async function searchTodos(
+  q: string,
+  filters?: SearchFilters,
+): Promise<TodoDashboardItem[]> {
   const token = await getAccessToken();
-  const url = q
-    ? `${process.env.NEXT_PUBLIC_API_URL}/todos/search?q=${encodeURIComponent(q)}`
-    : `${process.env.NEXT_PUBLIC_API_URL}/todos/search`;
+
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (filters?.priority) params.set('priority', filters.priority);
+  if (filters?.due_date_from) params.set('due_date_from', filters.due_date_from);
+  if (filters?.due_date_to) params.set('due_date_to', filters.due_date_to);
+  if (filters?.is_completed !== undefined)
+    params.set('is_completed', String(filters.is_completed));
+  if (filters?.category_id) params.set('category_id', filters.category_id);
+
+  const queryStr = params.toString();
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/todos/search${queryStr ? `?${queryStr}` : ''}`;
 
   const res = await fetch(url, {
     headers: {
@@ -79,4 +92,21 @@ export async function searchTodos(q: string): Promise<TodoDashboardItem[]> {
   }
 
   return res.json() as Promise<TodoDashboardItem[]>;
+}
+
+export async function getCategories(): Promise<CategoryItem[]> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`카테고리 로드 오류: ${res.status}`);
+  }
+
+  return res.json() as Promise<CategoryItem[]>;
 }

@@ -38,13 +38,10 @@ def _make_row(
 
 
 def _mock_supabase(rows: list[dict]) -> MagicMock:
-    """Fluent mock that returns self for all builder methods."""
+    """Fluent mock — 모든 빌더 메서드가 self 반환."""
     mock = MagicMock()
-    mock.table.return_value = mock
-    mock.select.return_value = mock
-    mock.eq.return_value = mock
-    mock.ilike.return_value = mock
-    mock.order.return_value = mock
+    for method in ["table", "select", "eq", "ilike", "gte", "lte", "order", "limit", "not_"]:
+        getattr(mock, method).return_value = mock
     execute_result = MagicMock()
     execute_result.data = rows
     mock.execute.return_value = execute_result
@@ -251,3 +248,143 @@ def test_search_router_does_not_conflict_with_patch():
     # search는 GET — PATCH 엔드포인트와 다른 메서드
     response = client.get("/todos/search")
     assert response.status_code == 200
+
+# ---------------------------------------------------------------------------
+# Unit tests — filter parameters (Story 3.2)
+# ---------------------------------------------------------------------------
+
+def test_filter_by_priority():
+    """priority 파라미터 있을 때 .eq("priority", ...) 호출."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, priority="high")
+    supabase.eq.assert_any_call("priority", "high")
+
+
+def test_filter_by_priority_none_no_eq():
+    """priority=None이면 .eq("priority", ...) 호출 없음."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, priority=None)
+    calls = [str(c) for c in supabase.eq.call_args_list]
+    assert not any("priority" in c for c in calls)
+
+
+def test_filter_by_due_date_from():
+    """.gte("due_date", due_date_from) 호출 확인."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, due_date_from="2026-06-01")
+    supabase.gte.assert_called_once_with("due_date", "2026-06-01")
+
+
+def test_filter_by_due_date_to():
+    """.lte("due_date", due_date_to) 호출 확인."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, due_date_to="2026-06-07")
+    supabase.lte.assert_called_once_with("due_date", "2026-06-07")
+
+
+def test_filter_by_is_completed_true():
+    """.eq("is_completed", True) 호출 확인."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, is_completed=True)
+    supabase.eq.assert_any_call("is_completed", True)
+
+
+def test_filter_by_is_completed_false():
+    """.eq("is_completed", False) 호출 확인."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, is_completed=False)
+    supabase.eq.assert_any_call("is_completed", False)
+
+
+def test_filter_is_completed_none_not_called():
+    """is_completed=None이면 .eq("is_completed", ...) 호출 없음."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, is_completed=None)
+    calls = [str(c) for c in supabase.eq.call_args_list]
+    assert not any("is_completed" in c for c in calls)
+
+
+def test_filter_by_category_id():
+    """.eq("category_id", ...) 호출 확인."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, category_id="cat-abc")
+    supabase.eq.assert_any_call("category_id", "cat-abc")
+
+
+def test_combined_filter_and_keyword():
+    """q + priority 동시 적용 시 ilike와 eq 모두 호출."""
+    supabase = _mock_supabase([])
+    search_todos(user_id="user-123", supabase=supabase, q="프로젝트", priority="high")
+    supabase.ilike.assert_called_once_with("title", "%프로젝트%")
+    supabase.eq.assert_any_call("priority", "high")
+
+
+def test_combined_date_range_filter():
+    """due_date_from + due_date_to 동시 적용."""
+    supabase = _mock_supabase([])
+    search_todos(
+        user_id="user-123",
+        supabase=supabase,
+        due_date_from="2026-06-02",
+        due_date_to="2026-06-08",
+    )
+    supabase.gte.assert_called_once_with("due_date", "2026-06-02")
+    supabase.lte.assert_called_once_with("due_date", "2026-06-08")
+
+
+def test_no_filter_returns_all():
+    """모든 파라미터 None이면 기존 동작 유지 — gte/lte/eq(priority)/eq(is_completed) 미호출."""
+    supabase = _mock_supabase([_make_row("1", "할일")])
+    result = search_todos(user_id="user-123", supabase=supabase)
+    assert len(result) == 1
+    supabase.gte.assert_not_called()
+    supabase.lte.assert_not_called()
+    supabase.ilike.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Router tests — filter parameters (Story 3.2)
+# ---------------------------------------------------------------------------
+
+def _make_search_client(rows: list[dict], *, raise_server_exceptions: bool = True):
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from routers.todos import router
+    from dependencies import get_current_user, get_supabase
+
+    app = FastAPI()
+    app.include_router(router)
+
+    fake_user = MagicMock()
+    fake_user.id = "user-123"
+    fake_user.sub = None
+
+    app.dependency_overrides[get_current_user] = lambda: fake_user
+    app.dependency_overrides[get_supabase] = lambda: _mock_supabase(rows)
+
+    return TestClient(app, raise_server_exceptions=raise_server_exceptions)
+
+
+def test_search_router_with_priority_filter():
+    """priority 쿼리 파라미터 전달 시 200 반환."""
+    client = _make_search_client([_make_row("1", "높음 우선순위 할일", priority="high")])
+    response = client.get("/todos/search?priority=high")
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)
+
+
+def test_search_router_with_is_completed_filter():
+    """is_completed 쿼리 파라미터 전달 시 200 반환."""
+    client = _make_search_client([])
+    response = client.get("/todos/search?is_completed=false")
+    assert response.status_code == 200
+
+
+def test_search_router_combined_filters():
+    """복합 필터 파라미터 전달 시 200 반환."""
+    client = _make_search_client([_make_row("1", "이번 주 할일", priority="high")])
+    response = client.get(
+        "/todos/search?priority=high&is_completed=false&due_date_from=2026-06-02&due_date_to=2026-06-08"
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), list)

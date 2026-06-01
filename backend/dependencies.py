@@ -26,6 +26,13 @@ def get_supabase() -> Any:
     return _supabase_singleton()
 
 
+def require_user_id(current_user) -> str:
+    user_id = getattr(current_user, "id", None) or getattr(current_user, "sub", None)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    return user_id
+
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     supabase: Client = Depends(get_supabase),
