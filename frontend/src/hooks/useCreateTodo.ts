@@ -11,6 +11,7 @@ export function useCreateTodo() {
     mutationFn: (data: CreateTodoRequest) => createTodo(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
     },
   });
 }

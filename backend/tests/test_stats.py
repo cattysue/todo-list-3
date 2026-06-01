@@ -230,6 +230,9 @@ def _make_supabase_category(data):
     inner = MagicMock()
     inner.select.return_value = inner
     inner.eq.return_value = inner
+    not_chain = MagicMock()
+    not_chain.is_.return_value = inner
+    inner.not_ = not_chain
     inner.execute.return_value = _make_execute_result(data)
     mock.table.return_value = inner
     return mock
@@ -292,18 +295,28 @@ def test_category_stats_empty():
 
 
 def test_category_stats_rate_capped_at_100():
-    """completed_count가 total_count를 초과하더라도 완료율은 100.0을 넘지 않는다."""
+    """완료 1개, 전체 1개인 카테고리의 완료율은 100.0이다."""
     rows = [
-        {"id": "1", "is_completed": True, "category_id": "cat-1", "categories": {"name": "업무"}},
+        {"is_completed": True, "category_id": "cat-1", "categories": {"name": "업무"}},
     ]
     result = get_category_stats("user-1", _make_supabase_category(rows))
-    assert result["data"][0]["completion_rate"] <= 100.0
+    assert result["data"][0]["completion_rate"] == 100.0
 
 
 def test_category_stats_categories_join():
     """categories 딕셔너리에서 category_name이 올바르게 추출된다."""
     rows = [
-        {"id": "1", "is_completed": False, "category_id": "cat-xyz", "categories": {"name": "취미"}},
+        {"is_completed": False, "category_id": "cat-xyz", "categories": {"name": "취미"}},
     ]
     result = get_category_stats("user-1", _make_supabase_category(rows))
     assert result["data"][0]["category_name"] == "취미"
+
+
+def test_category_stats_orphaned_fk_uses_sentinel():
+    """categories JOIN이 None을 반환하면 (고아 FK) category_name은 '(삭제된 카테고리)'가 된다."""
+    rows = [
+        {"is_completed": True, "category_id": "orphan-id", "categories": None},
+    ]
+    result = get_category_stats("user-1", _make_supabase_category(rows))
+    assert result["data"][0]["category_name"] == "(삭제된 카테고리)"
+    assert result["data"][0]["category_id"] == "orphan-id"

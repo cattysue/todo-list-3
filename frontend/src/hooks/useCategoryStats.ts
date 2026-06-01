@@ -6,5 +6,6 @@ export function useCategoryStats() {
   return useQuery({
     queryKey: queryKeys.stats.category(),
     queryFn: getCategoryStats,
+    staleTime: 5 * 60 * 1000,
   });
 }

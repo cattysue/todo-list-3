@@ -82,8 +82,9 @@ def get_category_stats(user_id: str, supabase) -> dict:
     """
     rows = (
         supabase.table("todos")
-        .select("id, is_completed, category_id, categories(name)")
+        .select("is_completed, category_id, categories(name)")
         .eq("user_id", user_id)
+        .not_.is_("category_id", "null")
         .execute()
         .data
     ) or []
@@ -94,7 +95,7 @@ def get_category_stats(user_id: str, supabase) -> dict:
         if not cat_id:
             continue
         cats = row.get("categories")
-        cat_name = cats.get("name") if isinstance(cats, dict) else cat_id
+        cat_name = cats.get("name") if isinstance(cats, dict) else "(삭제된 카테고리)"
         if cat_id not in category_map:
             category_map[cat_id] = {
                 "category_id": cat_id,
@@ -110,8 +111,7 @@ def get_category_stats(user_id: str, supabase) -> dict:
     for data in category_map.values():
         total = data["total_count"]
         completed = data["completed_count"]
-        raw_rate = completed / total * 100 if total > 0 else 0.0
-        rate = round(min(100.0, raw_rate), 1)
+        rate = round(completed / total * 100, 1)
         result.append({
             "category_id": data["category_id"],
             "category_name": data["category_name"],

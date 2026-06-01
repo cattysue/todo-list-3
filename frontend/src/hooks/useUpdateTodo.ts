@@ -12,6 +12,7 @@ export function useUpdateTodo() {
       updateTodo(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.todos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
     },
   });
 }

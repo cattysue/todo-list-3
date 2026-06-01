@@ -17,6 +17,10 @@ interface Props {
 
 export function CategoryChart({ data }: Props) {
   const chartHeight = Math.max(200, data.length * 52);
+  const yAxisWidth = Math.min(
+    160,
+    Math.max(80, ...data.map((d) => d.category_name.length * 8)),
+  );
 
   return (
     <div className="w-full" style={{ height: chartHeight }}>
@@ -36,7 +40,7 @@ export function CategoryChart({ data }: Props) {
           <YAxis
             type="category"
             dataKey="category_name"
-            width={80}
+            width={yAxisWidth}
             tick={{ fontSize: 11 }}
           />
           <Tooltip
