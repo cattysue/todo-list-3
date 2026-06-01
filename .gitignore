@@ -38,3 +38,4 @@ Thumbs.db
 # Node (프론트엔드 추후 추가 시)
 node_modules/
 .next/
+*.tsbuildinfo
