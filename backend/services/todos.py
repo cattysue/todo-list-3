@@ -1,4 +1,9 @@
+import logging
 from typing import Any, Optional
+
+from services.recurring import calculate_next_due_date
+
+logger = logging.getLogger(__name__)
 
 
 def create_todo(
@@ -73,6 +78,52 @@ def update_todo_content(
     if not rows:
         return None
     return _normalize_row(rows[0])
+
+
+_COMPLETE_SELECT = (
+    "id, is_completed, title, category_id, priority, created_at,"
+    " recurrence_type, recurrence_days, recurrence_day_of_month"
+)
+
+
+def complete_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
+    result = (
+        supabase.table("todos")
+        .update({"is_completed": True})
+        .eq("id", todo_id)
+        .eq("user_id", user_id)
+        .eq("is_completed", False)  # 이미 완료된 할일은 건너뜀 — 중복 재생성 방지
+        .select(_COMPLETE_SELECT)   # categories JOIN 불필요 (라우터는 id/is_completed만 사용)
+        .execute()
+    )
+    rows = result.data
+    if not rows:
+        return None
+
+    completed = _normalize_row(rows[0])
+
+    if completed.get("recurrence_type"):
+        try:
+            next_due = calculate_next_due_date(
+                recurrence_type=completed["recurrence_type"],
+                recurrence_days=completed.get("recurrence_days"),
+                recurrence_day_of_month=completed.get("recurrence_day_of_month"),
+            )
+            create_todo(
+                user_id=user_id,
+                supabase=supabase,
+                title=completed["title"],
+                category_id=completed.get("category_id"),
+                priority=completed.get("priority"),
+                due_date=next_due,
+                recurrence_type=completed["recurrence_type"],
+                recurrence_days=completed.get("recurrence_days"),
+                recurrence_day_of_month=completed.get("recurrence_day_of_month"),
+            )
+        except Exception as e:
+            logger.warning("반복 할일 재생성 실패 (todo_id=%s): %s", todo_id, e, exc_info=True)
+
+    return completed
 
 
 def _normalize_row(row: dict) -> dict:

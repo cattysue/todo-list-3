@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TodoUpdateRequest(BaseModel):
@@ -18,8 +18,10 @@ class TodoCreateRequest(BaseModel):
     priority: Optional[Literal["high", "medium", "low"]] = None
     due_date: Optional[str] = None
     recurrence_type: Optional[Literal["daily", "weekly", "monthly"]] = None
-    recurrence_days: Optional[str] = None
-    recurrence_day_of_month: Optional[int] = None
+    recurrence_days: Optional[str] = Field(
+        default=None, pattern=r"^[0-6](,[0-6])*$"
+    )
+    recurrence_day_of_month: Optional[int] = Field(default=None, ge=1, le=31)
 
 
 class TodoContentUpdateRequest(BaseModel):
@@ -28,8 +30,10 @@ class TodoContentUpdateRequest(BaseModel):
     priority: Optional[Literal["high", "medium", "low"]] = None
     due_date: Optional[str] = None
     recurrence_type: Optional[Literal["daily", "weekly", "monthly"]] = None
-    recurrence_days: Optional[str] = None
-    recurrence_day_of_month: Optional[int] = None
+    recurrence_days: Optional[str] = Field(
+        default=None, pattern=r"^[0-6](,[0-6])*$"
+    )
+    recurrence_day_of_month: Optional[int] = Field(default=None, ge=1, le=31)
 
 
 class TodoCreateResponse(BaseModel):

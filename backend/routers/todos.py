@@ -13,7 +13,7 @@ from schemas.todo import (
     TodoCreateResponse,
 )
 from services.search import search_todos as search_todos_service
-from services.todos import create_todo, get_todo, update_todo_content
+from services.todos import create_todo, get_todo, update_todo_content, complete_todo
 from dependencies import get_current_user, get_supabase, require_user_id
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -116,20 +116,11 @@ async def update_todo(
     supabase=Depends(get_supabase),
 ):
     user_id = require_user_id(current_user)
-
-    result = (
-        supabase.table("todos")
-        .update({"is_completed": body.is_completed})
-        .eq("id", str(todo_id))
-        .eq("user_id", user_id)
-        .execute()
-    )
-
-    if not result.data:
+    _ = body  # FastAPI가 is_completed: Literal[True] 검증에 사용; complete_todo는 True를 고정 적용
+    row = complete_todo(todo_id=str(todo_id), user_id=user_id, supabase=supabase)
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="할일을 찾을 수 없습니다.",
         )
-
-    row = result.data[0]
     return TodoUpdateResponse(id=row["id"], is_completed=row["is_completed"])

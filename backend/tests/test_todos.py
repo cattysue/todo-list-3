@@ -3,10 +3,10 @@ Tests for todos service (create/update) and router endpoints.
 
 Run with:  pytest backend/tests/test_todos.py -v
 """
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pytest
 
-from services.todos import create_todo, update_todo_content
+from services.todos import create_todo, update_todo_content, complete_todo
 
 
 # ---------------------------------------------------------------------------
@@ -20,26 +20,25 @@ def _make_user(user_id: str = "user-123") -> MagicMock:
     return user
 
 
-def _mock_insert(returned_row: dict) -> MagicMock:
-    """insert → select → single → execute 체인 mock."""
+def _make_mock_chain(data) -> MagicMock:
+    """범용 Supabase 체인 mock — 모든 메서드가 self를 반환."""
     mock = MagicMock()
-    for method in ["table", "insert", "select", "single", "eq", "update", "execute"]:
+    for method in ["table", "insert", "update", "select", "eq", "single"]:
         getattr(mock, method).return_value = mock
     execute_result = MagicMock()
-    execute_result.data = returned_row
+    execute_result.data = data
     mock.execute.return_value = execute_result
     return mock
+
+
+def _mock_insert(returned_row: dict) -> MagicMock:
+    """insert → select → single → execute 체인 mock."""
+    return _make_mock_chain(returned_row)
 
 
 def _mock_update(returned_rows: list[dict]) -> MagicMock:
     """update → eq → eq → select → execute 체인 mock."""
-    mock = MagicMock()
-    for method in ["table", "insert", "select", "single", "eq", "update"]:
-        getattr(mock, method).return_value = mock
-    execute_result = MagicMock()
-    execute_result.data = returned_rows
-    mock.execute.return_value = execute_result
-    return mock
+    return _make_mock_chain(returned_rows)
 
 
 def _make_todo_row(
@@ -477,5 +476,194 @@ def test_get_todo_router_404():
     client = TestClient(app, raise_server_exceptions=False)
 
     response = client.get(f"/todos/{_TODO_UUID}")
+
+    assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Service layer — complete_todo
+# ---------------------------------------------------------------------------
+
+def test_complete_todo_no_recurrence_returns_row():
+    """반복 없는 할일 완료 시 completed row 반환, create_todo 호출 안 됨."""
+    row = _make_todo_row(recurrence_type=None)
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.create_todo") as mock_create:
+        result = complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    assert result is not None
+    assert result["id"] == "todo-1"
+    mock_create.assert_not_called()
+
+
+def test_complete_todo_not_found_returns_none():
+    """존재하지 않는 할일 완료 시 None 반환."""
+    mock_sb = _mock_update([])
+
+    result = complete_todo(todo_id="nonexistent", user_id="user-123", supabase=mock_sb)
+
+    assert result is None
+
+
+def test_complete_todo_daily_spawns_next_instance():
+    """매일 반복 완료 시 calculate_next_due_date + create_todo 호출."""
+    row = _make_todo_row(title="매일 운동", recurrence_type="daily")
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.calculate_next_due_date", return_value="2026-06-02") as mock_calc, \
+         patch("services.todos.create_todo", return_value={}) as mock_create:
+        result = complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    mock_calc.assert_called_once_with(
+        recurrence_type="daily",
+        recurrence_days=None,
+        recurrence_day_of_month=None,
+    )
+    create_kwargs = mock_create.call_args[1]
+    assert create_kwargs["due_date"] == "2026-06-02"
+    assert create_kwargs["title"] == "매일 운동"
+    assert create_kwargs["recurrence_type"] == "daily"
+    assert result is not None
+
+
+def test_complete_todo_weekly_spawns_with_correct_recurrence():
+    """매주 반복 완료 시 동일 recurrence_days로 create_todo 호출."""
+    row = _make_todo_row(recurrence_type="weekly", recurrence_days="0,2")
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.calculate_next_due_date", return_value="2026-06-09") as mock_calc, \
+         patch("services.todos.create_todo", return_value={}) as mock_create:
+        complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    mock_calc.assert_called_once_with(
+        recurrence_type="weekly",
+        recurrence_days="0,2",
+        recurrence_day_of_month=None,
+    )
+    create_kwargs = mock_create.call_args[1]
+    assert create_kwargs["recurrence_days"] == "0,2"
+    assert create_kwargs["recurrence_type"] == "weekly"
+
+
+def test_complete_todo_monthly_spawns_with_correct_day():
+    """매월 반복 완료 시 recurrence_day_of_month로 create_todo 호출."""
+    row = _make_todo_row(recurrence_type="monthly", recurrence_day_of_month=15)
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.calculate_next_due_date", return_value="2026-07-15") as mock_calc, \
+         patch("services.todos.create_todo", return_value={}) as mock_create:
+        complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    mock_calc.assert_called_once_with(
+        recurrence_type="monthly",
+        recurrence_days=None,
+        recurrence_day_of_month=15,
+    )
+    create_kwargs = mock_create.call_args[1]
+    assert create_kwargs["recurrence_day_of_month"] == 15
+    assert create_kwargs["due_date"] == "2026-07-15"
+
+
+def test_complete_todo_spawn_failure_does_not_cancel_completion():
+    """재생성 예외 발생 시에도 완료 행 반환 (AC: 6)."""
+    row = _make_todo_row(recurrence_type="daily")
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.calculate_next_due_date", side_effect=Exception("DB 오류")):
+        result = complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    assert result is not None  # 완료 처리는 성공해야 함
+
+
+def test_complete_todo_preserves_category_and_priority():
+    """새 인스턴스에 원본 category_id, priority 전달."""
+    row = _make_todo_row(
+        title="보고서 작성",
+        recurrence_type="weekly",
+        recurrence_days="1",
+    )
+    # category_id, priority는 _make_todo_row에서 None이지만 명시적으로 set
+    row["category_id"] = "cat-42"
+    row["priority"] = "high"
+    mock_sb = _mock_update([row])
+
+    with patch("services.todos.calculate_next_due_date", return_value="2026-06-09"), \
+         patch("services.todos.create_todo", return_value={}) as mock_create:
+        complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    create_kwargs = mock_create.call_args[1]
+    assert create_kwargs["category_id"] == "cat-42"
+    assert create_kwargs["priority"] == "high"
+
+
+# ---------------------------------------------------------------------------
+# Router — PATCH /todos/{id}
+# ---------------------------------------------------------------------------
+
+def test_patch_router_completes_no_recurrence():
+    """PATCH /todos/{id}: 반복 없는 할일 완료 → 200."""
+    row = _make_todo_row(recurrence_type=None)
+    # complete_todo를 patch하여 supabase mock 복잡도 제거
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from routers.todos import router
+    from dependencies import get_current_user, get_supabase
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_user] = lambda: _make_user()
+    app.dependency_overrides[get_supabase] = lambda: MagicMock()
+
+    with patch("routers.todos.complete_todo", return_value={**row, "is_completed": True}):
+        client = TestClient(app)
+        response = client.patch(f"/todos/{_TODO_UUID}", json={"is_completed": True})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["id"] == "todo-1"
+    assert data["is_completed"] is True
+
+
+def test_patch_router_completes_with_recurrence_spawns_next():
+    """PATCH /todos/{id}: 반복 할일 완료 → 200, create_todo 호출."""
+    row = _make_todo_row(recurrence_type="daily")
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from routers.todos import router
+    from dependencies import get_current_user, get_supabase
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_user] = lambda: _make_user()
+    app.dependency_overrides[get_supabase] = lambda: MagicMock()
+
+    with patch("routers.todos.complete_todo", return_value={**row, "is_completed": True}) as mock_complete:
+        client = TestClient(app)
+        response = client.patch(f"/todos/{_TODO_UUID}", json={"is_completed": True})
+
+    assert response.status_code == 200
+    mock_complete.assert_called_once_with(
+        todo_id=_TODO_UUID,
+        user_id="user-123",
+        supabase=mock_complete.call_args[1]["supabase"],
+    )
+
+
+def test_patch_router_404_when_not_found():
+    """PATCH /todos/{id}: 존재하지 않는 할일 → 404."""
+    from fastapi.testclient import TestClient
+    from fastapi import FastAPI
+    from routers.todos import router
+    from dependencies import get_current_user, get_supabase
+
+    app = FastAPI()
+    app.include_router(router)
+    app.dependency_overrides[get_current_user] = lambda: _make_user()
+    app.dependency_overrides[get_supabase] = lambda: MagicMock()
+
+    with patch("routers.todos.complete_todo", return_value=None):
+        client = TestClient(app, raise_server_exceptions=False)
+        response = client.patch(f"/todos/{_TODO_UUID}", json={"is_completed": True})
 
     assert response.status_code == 404
