@@ -337,6 +337,9 @@ def test_create_todo_router_401():
     assert response.status_code == 401
 
 
+_TODO_UUID = "11111111-1111-1111-1111-111111111111"
+
+
 # ---------------------------------------------------------------------------
 # Router — PUT /todos/{id}
 # ---------------------------------------------------------------------------
@@ -345,22 +348,36 @@ def test_update_todo_router_200():
     updated_row = _make_todo_row(title="수정됨")
     client = _make_router_client(fake_user=_make_user(), update_rows=[updated_row])
 
-    response = client.put("/todos/todo-1", json={"title": "수정됨"})
+    response = client.put(f"/todos/{_TODO_UUID}", json={"title": "수정됨"})
 
     assert response.status_code == 200
     assert response.json()["title"] == "수정됨"
 
 
 def test_update_todo_router_404_when_not_found():
+    """존재하지 않는 UUID는 404 반환."""
     client = _make_router_client(
         fake_user=_make_user(),
         update_rows=[],
         raise_server_exceptions=False,
     )
 
-    response = client.put("/todos/nonexistent", json={"title": "제목"})
+    response = client.put(f"/todos/{_TODO_UUID}", json={"title": "제목"})
 
     assert response.status_code == 404
+
+
+def test_update_todo_router_422_invalid_uuid():
+    """비-UUID 경로는 FastAPI가 422 반환."""
+    client = _make_router_client(
+        fake_user=_make_user(),
+        update_rows=[],
+        raise_server_exceptions=False,
+    )
+
+    response = client.put("/todos/not-a-uuid", json={"title": "제목"})
+
+    assert response.status_code == 422
 
 
 def test_update_todo_router_422_empty_body():
@@ -371,7 +388,7 @@ def test_update_todo_router_422_empty_body():
         raise_server_exceptions=False,
     )
 
-    response = client.put("/todos/todo-1", json={})
+    response = client.put(f"/todos/{_TODO_UUID}", json={})
 
     assert response.status_code == 422
 
@@ -382,7 +399,7 @@ def test_update_todo_router_clears_recurrence():
     client = _make_router_client(fake_user=_make_user(), update_rows=[cleared_row])
 
     response = client.put(
-        "/todos/todo-1",
+        f"/todos/{_TODO_UUID}",
         json={"recurrence_type": None, "recurrence_days": None},
     )
 
@@ -397,7 +414,7 @@ def test_update_todo_router_recurrence():
     client = _make_router_client(fake_user=_make_user(), update_rows=[updated_row])
 
     response = client.put(
-        "/todos/todo-1",
+        f"/todos/{_TODO_UUID}",
         json={"recurrence_type": "monthly", "recurrence_day_of_month": 1},
     )
 
@@ -415,13 +432,27 @@ def test_get_todo_router_200():
     row = _make_todo_row(title="운동하기", recurrence_type="weekly", recurrence_days="0,4")
     client = _make_router_client(fake_user=_make_user(), get_row=row)
 
-    response = client.get("/todos/todo-1")
+    response = client.get(f"/todos/{_TODO_UUID}")
 
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == "운동하기"
     assert data["recurrence_type"] == "weekly"
     assert data["recurrence_days"] == "0,4"
+
+
+def test_get_todo_router_422_invalid_uuid():
+    """비-UUID 경로는 FastAPI가 422 반환."""
+    row = _make_todo_row()
+    client = _make_router_client(
+        fake_user=_make_user(),
+        get_row=row,
+        raise_server_exceptions=False,
+    )
+
+    response = client.get("/todos/not-a-uuid")
+
+    assert response.status_code == 422
 
 
 def test_get_todo_router_404():
@@ -445,6 +476,6 @@ def test_get_todo_router_404():
     app.dependency_overrides[get_supabase] = lambda: mock
     client = TestClient(app, raise_server_exceptions=False)
 
-    response = client.get("/todos/nonexistent")
+    response = client.get(f"/todos/{_TODO_UUID}")
 
     assert response.status_code == 404

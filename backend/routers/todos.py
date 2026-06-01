@@ -45,12 +45,12 @@ def search_todos(
 
 @router.get("/{todo_id}", response_model=TodoCreateResponse)
 def get_todo_endpoint(
-    todo_id: str,
+    todo_id: UUID,
     current_user=Depends(get_current_user),
     supabase=Depends(get_supabase),
 ):
     user_id = require_user_id(current_user)
-    row = get_todo(todo_id=todo_id, user_id=user_id, supabase=supabase)
+    row = get_todo(todo_id=str(todo_id), user_id=user_id, supabase=supabase)
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -82,7 +82,7 @@ def create_todo_endpoint(
 
 @router.put("/{todo_id}", response_model=TodoCreateResponse)
 def update_todo_content_endpoint(
-    todo_id: str,
+    todo_id: UUID,
     body: TodoContentUpdateRequest,
     current_user=Depends(get_current_user),
     supabase=Depends(get_supabase),
@@ -95,7 +95,7 @@ def update_todo_content_endpoint(
         )
     updates = {field: getattr(body, field) for field in body.model_fields_set}
     row = update_todo_content(
-        todo_id=todo_id,
+        todo_id=str(todo_id),
         user_id=user_id,
         supabase=supabase,
         updates=updates,
