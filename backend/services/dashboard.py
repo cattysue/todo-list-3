@@ -40,6 +40,8 @@ def _build_item(row: dict[str, Any]) -> TodoDashboardItem:
         created_at=row.get("created_at"),
         category_id=row.get("category_id"),
         category_name=category_name,
+        recurrence_type=row.get("recurrence_type"),
+        recurrence_paused=row.get("recurrence_paused", False),
     )
 
 

@@ -82,7 +82,7 @@ def update_todo_content(
 
 _COMPLETE_SELECT = (
     "id, is_completed, title, category_id, priority, created_at,"
-    " recurrence_type, recurrence_days, recurrence_day_of_month"
+    " recurrence_type, recurrence_days, recurrence_day_of_month, recurrence_paused"
 )
 
 
@@ -102,7 +102,7 @@ def complete_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
 
     completed = _normalize_row(rows[0])
 
-    if completed.get("recurrence_type"):
+    if completed.get("recurrence_type") and not completed.get("recurrence_paused"):
         try:
             next_due = calculate_next_due_date(
                 recurrence_type=completed["recurrence_type"],
@@ -126,6 +126,83 @@ def complete_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
     return completed
 
 
+def control_recurrence(todo_id: str, user_id: str, action: str, supabase) -> Optional[dict]:
+    """반복 할일 제어: skip / pause / resume / end."""
+    todo = get_todo(todo_id=todo_id, user_id=user_id, supabase=supabase)
+    if not todo or not todo.get("recurrence_type"):
+        return None
+
+    if action == "skip":
+        next_due = calculate_next_due_date(
+            recurrence_type=todo["recurrence_type"],
+            recurrence_days=todo.get("recurrence_days"),
+            recurrence_day_of_month=todo.get("recurrence_day_of_month"),
+        )
+        create_todo(
+            user_id=user_id,
+            supabase=supabase,
+            title=todo["title"],
+            category_id=todo.get("category_id"),
+            priority=todo.get("priority"),
+            due_date=next_due,
+            recurrence_type=todo["recurrence_type"],
+            recurrence_days=todo.get("recurrence_days"),
+            recurrence_day_of_month=todo.get("recurrence_day_of_month"),
+        )
+        supabase.table("todos").delete().eq("id", todo_id).eq("user_id", user_id).execute()
+        return {"id": todo_id, "action": action}
+
+    if action == "pause":
+        update_todo_content(
+            todo_id=todo_id,
+            user_id=user_id,
+            supabase=supabase,
+            updates={"recurrence_paused": True},
+        )
+        return {"id": todo_id, "action": action}
+
+    if action == "resume":
+        update_todo_content(
+            todo_id=todo_id,
+            user_id=user_id,
+            supabase=supabase,
+            updates={"recurrence_paused": False},
+        )
+        next_due = calculate_next_due_date(
+            recurrence_type=todo["recurrence_type"],
+            recurrence_days=todo.get("recurrence_days"),
+            recurrence_day_of_month=todo.get("recurrence_day_of_month"),
+        )
+        create_todo(
+            user_id=user_id,
+            supabase=supabase,
+            title=todo["title"],
+            category_id=todo.get("category_id"),
+            priority=todo.get("priority"),
+            due_date=next_due,
+            recurrence_type=todo["recurrence_type"],
+            recurrence_days=todo.get("recurrence_days"),
+            recurrence_day_of_month=todo.get("recurrence_day_of_month"),
+        )
+        return {"id": todo_id, "action": action}
+
+    if action == "end":
+        update_todo_content(
+            todo_id=todo_id,
+            user_id=user_id,
+            supabase=supabase,
+            updates={
+                "recurrence_type": None,
+                "recurrence_days": None,
+                "recurrence_day_of_month": None,
+                "recurrence_paused": False,
+            },
+        )
+        return {"id": todo_id, "action": action}
+
+    return None
+
+
 def _normalize_row(row: dict) -> dict:
     categories = row.get("categories")
     category_name = categories.get("name") if isinstance(categories, dict) else None
@@ -141,4 +218,5 @@ def _normalize_row(row: dict) -> dict:
         "recurrence_type": row.get("recurrence_type"),
         "recurrence_days": row.get("recurrence_days"),
         "recurrence_day_of_month": row.get("recurrence_day_of_month"),
+        "recurrence_paused": row.get("recurrence_paused", False),
     }

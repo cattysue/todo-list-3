@@ -3,6 +3,15 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
+class RecurrenceControlRequest(BaseModel):
+    action: Literal["skip", "pause", "resume", "end"]
+
+
+class RecurrenceControlResponse(BaseModel):
+    todo_id: str
+    action: str
+
+
 class TodoUpdateRequest(BaseModel):
     is_completed: Literal[True]
 
@@ -48,4 +57,5 @@ class TodoCreateResponse(BaseModel):
     recurrence_type: Optional[str] = None
     recurrence_days: Optional[str] = None
     recurrence_day_of_month: Optional[int] = None
+    recurrence_paused: bool = False
     model_config = {"from_attributes": True}

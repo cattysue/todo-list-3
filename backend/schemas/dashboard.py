@@ -16,6 +16,8 @@ class TodoDashboardItem(BaseModel):
     created_at: Optional[datetime] = None
     category_id: Optional[str] = None
     category_name: Optional[str] = None
+    recurrence_type: Optional[str] = None
+    recurrence_paused: bool = False
 
     model_config = {"from_attributes": True}
 

@@ -12,6 +12,8 @@ const makeItem = (overrides: Partial<TodoDashboardItem> = {}): TodoDashboardItem
   created_at: null,
   category_id: null,
   category_name: null,
+  recurrence_type: null,
+  recurrence_paused: false,
   ...overrides,
 });
 

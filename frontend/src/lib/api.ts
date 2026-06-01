@@ -145,6 +145,31 @@ export async function getTodo(id: string): Promise<TodoItem> {
   return res.json() as Promise<TodoItem>;
 }
 
+export type RecurrenceAction = 'skip' | 'pause' | 'resume' | 'end';
+
+export async function controlRecurrence(
+  todoId: string,
+  action: RecurrenceAction,
+): Promise<void> {
+  const token = await getAccessToken();
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/todos/${todoId}/recurrence`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action }),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(`반복 제어 오류: ${res.status}`);
+  }
+}
+
 export async function updateTodo(
   id: string,
   data: UpdateTodoRequest,

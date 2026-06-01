@@ -11,9 +11,11 @@ from schemas.todo import (
     TodoCreateRequest,
     TodoContentUpdateRequest,
     TodoCreateResponse,
+    RecurrenceControlRequest,
+    RecurrenceControlResponse,
 )
 from services.search import search_todos as search_todos_service
-from services.todos import create_todo, get_todo, update_todo_content, complete_todo
+from services.todos import create_todo, get_todo, update_todo_content, complete_todo, control_recurrence
 from dependencies import get_current_user, get_supabase, require_user_id
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -124,3 +126,25 @@ async def update_todo(
             detail="할일을 찾을 수 없습니다.",
         )
     return TodoUpdateResponse(id=row["id"], is_completed=row["is_completed"])
+
+
+@router.post("/{todo_id}/recurrence", response_model=RecurrenceControlResponse)
+def control_todo_recurrence(
+    todo_id: UUID,
+    body: RecurrenceControlRequest,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = require_user_id(current_user)
+    result = control_recurrence(
+        todo_id=str(todo_id),
+        user_id=user_id,
+        action=body.action,
+        supabase=supabase,
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="반복 할일을 찾을 수 없습니다.",
+        )
+    return RecurrenceControlResponse(todo_id=str(todo_id), action=body.action)

@@ -17,6 +17,8 @@ const mockItem = {
   created_at: null,
   category_id: null,
   category_name: null,
+  recurrence_type: null as null,
+  recurrence_paused: false,
 };
 
 const mockDashboardData: DashboardResponse = {

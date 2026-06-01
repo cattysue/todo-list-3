@@ -7,6 +7,8 @@ export interface TodoDashboardItem {
   created_at: string | null;
   category_id: string | null;
   category_name: string | null;
+  recurrence_type: 'daily' | 'weekly' | 'monthly' | null;
+  recurrence_paused: boolean;
 }
 
 export interface DashboardResponse {

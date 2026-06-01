@@ -41,6 +41,17 @@ def _mock_update(returned_rows: list[dict]) -> MagicMock:
     return _make_mock_chain(returned_rows)
 
 
+def _mock_update_with_select(returned_rows: list[dict]) -> MagicMock:
+    """update → eq → eq → eq → select → execute 체인 mock (recurrence 필드 포함)."""
+    mock = MagicMock()
+    for method in ["table", "update", "select", "eq", "single", "insert"]:
+        getattr(mock, method).return_value = mock
+    execute_result = MagicMock()
+    execute_result.data = returned_rows
+    mock.execute.return_value = execute_result
+    return mock
+
+
 def _make_todo_row(
     id: str = "todo-1",
     title: str = "테스트 할일",
@@ -48,6 +59,7 @@ def _make_todo_row(
     recurrence_days=None,
     recurrence_day_of_month=None,
     category_name=None,
+    recurrence_paused: bool = False,
 ) -> dict:
     return {
         "id": id,
@@ -62,6 +74,7 @@ def _make_todo_row(
         "recurrence_type": recurrence_type,
         "recurrence_days": recurrence_days,
         "recurrence_day_of_month": recurrence_day_of_month,
+        "recurrence_paused": recurrence_paused,
     }
 
 
@@ -595,6 +608,19 @@ def test_complete_todo_preserves_category_and_priority():
     create_kwargs = mock_create.call_args[1]
     assert create_kwargs["category_id"] == "cat-42"
     assert create_kwargs["priority"] == "high"
+
+
+def test_complete_todo_paused_does_not_spawn():
+    """recurrence_paused=True인 반복 할일 완료 시 새 인스턴스 생성 안 됨."""
+    row = _make_todo_row(recurrence_type="daily", recurrence_paused=True)
+    mock_sb = _mock_update_with_select([row])
+
+    with patch("services.todos.calculate_next_due_date") as mock_calc:
+        result = complete_todo(todo_id="todo-1", user_id="user-123", supabase=mock_sb)
+
+    mock_calc.assert_not_called()
+    assert result is not None
+    assert result["recurrence_paused"] is True
 
 
 # ---------------------------------------------------------------------------
