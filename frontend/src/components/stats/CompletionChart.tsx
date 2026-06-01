@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import {
   Bar,
@@ -29,17 +29,17 @@ export function CompletionChart({ data }: Props) {
           <Tooltip
             formatter={(value: number | undefined, name: string) => {
             if (value === undefined) return ['', name];
-            if (name === '?�료??) return [`${value}%`, name];
+            if (name === '?�료??) return [`${value}%`, name];
             return [value, name];
           }}
           />
           <Legend />
-          <Bar yAxisId="left" dataKey="completed_count" name="?�료 개수" fill="#3b82f6" />
+          <Bar yAxisId="left" dataKey="completed_count" name="?�료 개수" fill="#3b82f6" />
           <Line
             yAxisId="right"
             type="monotone"
             dataKey="completion_rate"
-            name="?�료??
+            name="?�료??
             stroke="#10b981"
             strokeWidth={2}
             dot={{ r: 3 }}
@@ -49,3 +49,4 @@ export function CompletionChart({ data }: Props) {
     </div>
   );
 }
+
