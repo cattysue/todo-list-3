@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-06-01
-last_updated: 2026-06-01  # updated by dev-story (story 5.1 review)
+last_updated: 2026-06-01  # updated by dev-story (story 5.2 review)
 project: todo-list-3
 project_key: NOKEY
 tracking_system: file-system
@@ -70,7 +70,7 @@ development_status:
   # Epic 5: 캘린더 뷰
   epic-5: in-progress
   5-1-캘린더-뷰-페이지-구현: review
-  5-2-드래그로-마감일-변경: backlog
+  5-2-드래그로-마감일-변경: review
   epic-5-retrospective: optional
 
   # Epic 6: 생산성 통계

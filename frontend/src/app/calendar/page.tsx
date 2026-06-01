@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { DndContext, type DragEndEvent } from '@dnd-kit/core';
 import { useCalendar } from '@/hooks/useCalendar';
+import { useDragDueDate } from '@/hooks/useDragDueDate';
 import { MonthView } from '@/components/calendar/MonthView';
 import { WeekView } from '@/components/calendar/WeekView';
 import { DayDetailPanel } from '@/components/calendar/DayDetailPanel';
@@ -25,6 +27,7 @@ export default function CalendarPage() {
   );
 
   const { data: todos = [], isLoading, isError } = useCalendar(range.start, range.end);
+  const dragDueDate = useDragDueDate();
 
   const todosByDate = useMemo(() => {
     const map: Record<string, TodoCalendarItem[]> = {};
@@ -37,6 +40,31 @@ export default function CalendarPage() {
   }, [todos]);
 
   const selectedTodos = selectedDate ? (todosByDate[selectedDate] ?? []) : [];
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+
+    const todoId = String(active.id);
+    const newDueDate = String(over.id);
+
+    let previousDueDate: string | null = null;
+    for (const [dateStr, items] of Object.entries(todosByDate)) {
+      if (items.some((t) => t.id === todoId)) {
+        previousDueDate = dateStr;
+        break;
+      }
+    }
+    if (!previousDueDate || previousDueDate === newDueDate) return;
+
+    dragDueDate.mutate({
+      todoId,
+      newDueDate,
+      previousDueDate,
+      calendarStart: range.start,
+      calendarEnd: range.end,
+    });
+  }
 
   function handleNavigate(direction: 1 | -1) {
     setCurrentDate((prev) =>
@@ -105,34 +133,36 @@ export default function CalendarPage() {
         </p>
       )}
 
-      <div className={['flex gap-4', selectedDate ? 'items-start' : ''].join(' ')}>
-        <div className={selectedDate ? 'flex-1' : 'w-full'}>
-          {view === 'month' ? (
-            <MonthView
-              currentDate={currentDate}
-              todosByDate={todosByDate}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-            />
-          ) : (
-            <WeekView
-              currentDate={currentDate}
-              todosByDate={todosByDate}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-            />
+      <DndContext onDragEnd={handleDragEnd}>
+        <div className={['flex gap-4', selectedDate ? 'items-start' : ''].join(' ')}>
+          <div className={selectedDate ? 'flex-1' : 'w-full'}>
+            {view === 'month' ? (
+              <MonthView
+                currentDate={currentDate}
+                todosByDate={todosByDate}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+              />
+            ) : (
+              <WeekView
+                currentDate={currentDate}
+                todosByDate={todosByDate}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+              />
+            )}
+          </div>
+          {selectedDate && (
+            <div className="w-64 shrink-0">
+              <DayDetailPanel
+                dateStr={selectedDate}
+                todos={selectedTodos}
+                onClose={() => setSelectedDate(null)}
+              />
+            </div>
           )}
         </div>
-        {selectedDate && (
-          <div className="w-64 shrink-0">
-            <DayDetailPanel
-              dateStr={selectedDate}
-              todos={selectedTodos}
-              onClose={() => setSelectedDate(null)}
-            />
-          </div>
-        )}
-      </div>
+      </DndContext>
     </main>
   );
 }

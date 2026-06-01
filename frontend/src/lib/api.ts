@@ -240,6 +240,19 @@ export async function applyTemplate(
   return res.json() as Promise<TodoItem[]>;
 }
 
+export async function updateTodoDueDate(todoId: string, dueDate: string): Promise<void> {
+  const token = await getAccessToken();
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/todos/${todoId}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ due_date: dueDate }),
+  });
+  if (!res.ok) throw new Error(`마감일 변경 오류: ${res.status}`);
+}
+
 export async function getCalendarTodos(
   start: string,
   end: string,
