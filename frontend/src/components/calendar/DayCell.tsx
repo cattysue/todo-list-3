@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/calendarUtils';
 import type { TodoCalendarItem } from '@/types/calendar';
 
 const MAX_VISIBLE = 3;
@@ -11,15 +12,8 @@ interface Props {
   onClick: (dateStr: string) => void;
 }
 
-function formatDateStr(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 export function DayCell({ date, todos, isCurrentMonth, isToday, isSelected, onClick }: Props) {
-  const dateStr = formatDateStr(date);
+  const dateStr = formatDate(date);
   const visible = todos.slice(0, MAX_VISIBLE);
   const overflow = todos.length - MAX_VISIBLE;
 

@@ -1,6 +1,6 @@
 def _build_calendar_item(row: dict) -> dict:
     categories = row.get("categories") or {}
-    category_name = categories.get("name") if isinstance(categories, dict) else None
+    category_name = categories.get("name")
     return {
         "id": row["id"],
         "title": row["title"],

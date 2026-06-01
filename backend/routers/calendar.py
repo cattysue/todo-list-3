@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date as date_type, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends
@@ -24,7 +24,8 @@ def get_calendar(
     if end:
         resolved_end = end
     else:
-        next_month_first = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+        ref = date_type.fromisoformat(resolved_start)
+        next_month_first = (ref.replace(day=28) + timedelta(days=4)).replace(day=1)
         resolved_end = (next_month_first - timedelta(days=1)).isoformat()
 
     return get_calendar_todos(

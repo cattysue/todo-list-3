@@ -11,10 +11,17 @@ export function getMonthRange(date: Date): { start: string; end: string } {
   return { start: formatDate(start), end: formatDate(end) };
 }
 
-export function getWeekRange(date: Date): { start: string; end: string } {
+export const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'] as const;
+
+function getMondayOf(date: Date): Date {
   const isoDay = date.getDay() === 0 ? 6 : date.getDay() - 1; // Mon=0, Sun=6
   const monday = new Date(date);
   monday.setDate(date.getDate() - isoDay);
+  return monday;
+}
+
+export function getWeekRange(date: Date): { start: string; end: string } {
+  const monday = getMondayOf(date);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
   return { start: formatDate(monday), end: formatDate(sunday) };
@@ -45,9 +52,7 @@ export function getMonthGridDays(date: Date): Date[] {
 }
 
 export function getWeekDays(date: Date): Date[] {
-  const isoDay = date.getDay() === 0 ? 6 : date.getDay() - 1;
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - isoDay);
+  const monday = getMondayOf(date);
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);

@@ -1,8 +1,6 @@
-import { getWeekDays, isToday, formatDate } from '@/lib/calendarUtils';
+import { getWeekDays, isSameMonth, isToday, formatDate, WEEKDAYS } from '@/lib/calendarUtils';
 import { DayCell } from './DayCell';
 import type { TodoCalendarItem } from '@/types/calendar';
-
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
 interface Props {
   currentDate: Date;
@@ -31,7 +29,7 @@ export function WeekView({ currentDate, todosByDate, selectedDate, onSelectDate 
               key={dateStr}
               date={day}
               todos={todosByDate[dateStr] ?? []}
-              isCurrentMonth={true}
+              isCurrentMonth={isSameMonth(day, currentDate)}
               isToday={isToday(day)}
               isSelected={selectedDate === dateStr}
               onClick={onSelectDate}

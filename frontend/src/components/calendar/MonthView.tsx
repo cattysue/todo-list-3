@@ -1,8 +1,6 @@
-import { getMonthGridDays, isSameMonth, isToday, formatDate } from '@/lib/calendarUtils';
+import { getMonthGridDays, isSameMonth, isToday, formatDate, WEEKDAYS } from '@/lib/calendarUtils';
 import { DayCell } from './DayCell';
 import type { TodoCalendarItem } from '@/types/calendar';
-
-const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 
 interface Props {
   currentDate: Date;

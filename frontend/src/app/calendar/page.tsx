@@ -50,14 +50,10 @@ export default function CalendarPage() {
     setSelectedDate(null);
   }
 
-  const monthLabel = currentDate.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-  });
-  const weekLabel = (() => {
-    const r = getWeekRange(currentDate);
-    return `${r.start} ~ ${r.end}`;
-  })();
+  const label =
+    view === 'month'
+      ? currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })
+      : `${range.start} ~ ${range.end}`;
 
   if (isLoading) return <CalendarLoading />;
 
@@ -92,7 +88,7 @@ export default function CalendarPage() {
             &lt;
           </button>
           <span className="text-sm font-semibold w-52 text-center">
-            {view === 'month' ? monthLabel : weekLabel}
+            {label}
           </span>
           <button
             onClick={() => handleNavigate(1)}
