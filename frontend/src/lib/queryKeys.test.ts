@@ -59,6 +59,28 @@ describe('queryKeys', () => {
     });
   });
 
+  describe('todos.calendar(start, end)', () => {
+    it('["todos", "calendar", start, end] 배열을 반환한다', () => {
+      expect(queryKeys.todos.calendar('2026-06-01', '2026-06-30')).toEqual([
+        'todos',
+        'calendar',
+        '2026-06-01',
+        '2026-06-30',
+      ]);
+    });
+
+    it('다른 범위에 대해 다른 키를 반환한다', () => {
+      const k1 = queryKeys.todos.calendar('2026-06-01', '2026-06-30');
+      const k2 = queryKeys.todos.calendar('2026-07-01', '2026-07-31');
+      expect(k1).not.toEqual(k2);
+    });
+
+    it('todos prefix 포함 — invalidateQueries(todos.all) 가능', () => {
+      const key = queryKeys.todos.calendar('2026-06-01', '2026-06-30');
+      expect(key[0]).toBe('todos');
+    });
+  });
+
   describe('queryKeys 구조 불변성', () => {
     it('todos.all은 as const로 고정된 배열이다', () => {
       expect(Array.isArray(queryKeys.todos.all)).toBe(true);

@@ -3,6 +3,7 @@ import type { DashboardResponse, TodoDashboardItem } from '@/types/dashboard';
 import type { CategoryItem, SearchFilters } from '@/types/filters';
 import type { Template, CreateTemplateRequest, ApplyTemplateRequest } from '@/types/templates';
 import type { TodoItem, CreateTodoRequest, UpdateTodoRequest } from '@/types/todos';
+import type { TodoCalendarItem } from '@/types/calendar';
 
 async function getAccessToken(): Promise<string> {
   const supabase = createClient();
@@ -237,4 +238,18 @@ export async function applyTemplate(
   );
   if (!res.ok) throw new Error(`템플릿 적용 오류: ${res.status}`);
   return res.json() as Promise<TodoItem[]>;
+}
+
+export async function getCalendarTodos(
+  start: string,
+  end: string,
+): Promise<TodoCalendarItem[]> {
+  const token = await getAccessToken();
+  const params = new URLSearchParams({ start, end });
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/todos/calendar?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`캘린더 조회 오류: ${res.status}`);
+  return res.json() as Promise<TodoCalendarItem[]>;
 }
