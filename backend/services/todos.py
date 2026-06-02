@@ -33,16 +33,23 @@ def create_todo(
         **{k: v for k, v in optional.items() if v is not None},
     }
 
-    response = (
+    insert_response = (
         supabase.table("todos")
         .insert(data)
+        .execute()
+    )
+    row_id = insert_response.data[0]["id"]
+
+    response = (
+        supabase.table("todos")
         .select("*, categories(name)")
+        .eq("id", row_id)
         .single()
         .execute()
     )
     row = response.data
     return _normalize_row(row)
-
+    
 
 def get_todo(todo_id: str, user_id: str, supabase) -> Optional[dict]:
     response = (
