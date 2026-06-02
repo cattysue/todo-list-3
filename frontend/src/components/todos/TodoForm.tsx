@@ -4,7 +4,6 @@ import { useState } from 'react';
 
 import { useCreateTodo } from '@/hooks/useCreateTodo';
 import { useUpdateTodo } from '@/hooks/useUpdateTodo';
-import { useCategories } from '@/hooks/useCategories';
 import type { TodoItem, RecurrenceType } from '@/types/todos';
 
 const DAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -19,7 +18,6 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
   const isEdit = !!initialData;
 
   const [title, setTitle] = useState(initialData?.title ?? '');
-  const [categoryId, setCategoryId] = useState(initialData?.category_id ?? '');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low' | ''>(
     initialData?.priority ?? '',
   );
@@ -38,7 +36,6 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
   );
   const [error, setError] = useState('');
 
-  const { data: categories = [] } = useCategories();
   const createMutation = useCreateTodo();
   const updateMutation = useUpdateTodo();
 
@@ -72,8 +69,6 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
       }
     }
 
-    // edit 모드: recurrence 필드를 항상 명시적으로 전송해 DB 값을 정확히 덮어씀
-    // create 모드: 값이 없으면 undefined로 생략 (DB 기본값 NULL 사용)
     const recurrencePayload = isEdit
       ? {
           recurrence_type: (recurrenceType || null) as RecurrenceType | null,
@@ -96,7 +91,6 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
 
     const payload = {
       title: title.trim(),
-      category_id: categoryId || undefined,
       priority: (priority || undefined) as 'high' | 'medium' | 'low' | undefined,
       due_date: dueDate || undefined,
       ...recurrencePayload,
@@ -142,38 +136,19 @@ export default function TodoForm({ initialData, onSuccess, onCancel }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isPending}
-          >
-            <option value="">없음</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">우선순위</label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as 'high' | 'medium' | 'low' | '')}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isPending}
-          >
-            <option value="">없음</option>
-            <option value="high">높음</option>
-            <option value="medium">중간</option>
-            <option value="low">낮음</option>
-          </select>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">우선순위</label>
+        <select
+          value={priority}
+          onChange={(e) => setPriority(e.target.value as 'high' | 'medium' | 'low' | '')}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isPending}
+        >
+          <option value="">없음</option>
+          <option value="high">높음</option>
+          <option value="medium">중간</option>
+          <option value="low">낮음</option>
+        </select>
       </div>
 
       <div>
