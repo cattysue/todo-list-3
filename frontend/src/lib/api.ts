@@ -278,3 +278,17 @@ export async function getCalendarTodos(
   if (!res.ok) throw new Error(`캘린더 조회 오류: ${res.status}`);
   return res.json() as Promise<TodoCalendarItem[]>;
 }
+export async function deleteTodo(id: string): Promise<void> {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/todos/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`할일 삭제 오류: ${res.status}`);
+  }
+}

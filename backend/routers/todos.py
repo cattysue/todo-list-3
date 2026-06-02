@@ -148,3 +148,22 @@ def control_todo_recurrence(
             detail="반복 할일을 찾을 수 없습니다.",
         )
     return RecurrenceControlResponse(todo_id=str(todo_id), action=body.action)
+@router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_todo_endpoint(
+    todo_id: UUID,
+    current_user=Depends(get_current_user),
+    supabase=Depends(get_supabase),
+):
+    user_id = require_user_id(current_user)
+    result = (
+        supabase.table("todos")
+        .delete()
+        .eq("id", str(todo_id))
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="할일을 찾을 수 없습니다.",
+        )

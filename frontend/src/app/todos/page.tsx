@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { searchTodos, completeTodo } from '@/lib/api';
+import { useDeleteTodo } from '@/hooks/useDeleteTodo';
 import TodoModal from '@/components/todos/TodoModal';
 import type { TodoItem } from '@/types/todos';
 
@@ -32,10 +33,11 @@ export default function TodosPage() {
   const [filterPriority, setFilterPriority] = useState<FilterPriority>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTodo, setEditingTodo] = useState<TodoItem | undefined>();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+  const deleteMutation = useDeleteTodo();
 
-  // searchTodos('', 필터) → 전체 목록 조회
   const {
     data: todos = [],
     isLoading,
@@ -65,7 +67,6 @@ export default function TodosPage() {
   };
 
   const handleEdit = (todo: unknown) => {
-    // TodoDashboardItem → TodoItem 캐스팅 (필드 구조 호환)
     setEditingTodo(todo as TodoItem);
     setIsModalOpen(true);
   };
@@ -74,6 +75,14 @@ export default function TodosPage() {
     setIsModalOpen(false);
     setEditingTodo(undefined);
     queryClient.invalidateQueries({ queryKey: ['todos'] });
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm('정말 삭제할까요?')) return;
+    setDeletingId(id);
+    deleteMutation.mutate(id, {
+      onSettled: () => setDeletingId(null),
+    });
   };
 
   const pendingCount = todos.filter((t) => !t.is_completed).length;
@@ -105,7 +114,6 @@ export default function TodosPage() {
 
       {/* ── Filters ── */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
-        {/* 상태 필터 */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {(
             [
@@ -128,7 +136,6 @@ export default function TodosPage() {
           ))}
         </div>
 
-        {/* 우선순위 필터 */}
         <select
           value={filterPriority}
           onChange={(e) => setFilterPriority(e.target.value as FilterPriority)}
@@ -220,14 +227,7 @@ export default function TodosPage() {
                 >
                   {todo.title}
                 </p>
-
-                {/* 메타 정보 */}
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  {todo.category_name && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {todo.category_name}
-                    </span>
-                  )}
                   {todo.due_date && (
                     <span
                       className={`text-xs ${
@@ -266,16 +266,27 @@ export default function TodosPage() {
                   className="flex-shrink-0 text-gray-300 hover:text-blue-500 transition-colors mt-0.5"
                   title="수정"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-4 h-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
                 </button>
               )}
+
+              {/* 삭제 버튼 */}
+              <button
+                onClick={() => handleDelete(todo.id)}
+                disabled={deletingId === todo.id}
+                className="flex-shrink-0 text-gray-300 hover:text-red-500 transition-colors mt-0.5 disabled:opacity-40"
+                title="삭제"
+              >
+                {deletingId === todo.id ? (
+                  <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
             </li>
           ))}
         </ul>
