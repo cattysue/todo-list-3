@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 const NAV_ITEMS = [
   {
@@ -62,8 +63,15 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   if (pathname === '/login') return null;
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <aside className="fixed top-0 left-0 h-full w-56 bg-white border-r border-slate-100 flex flex-col z-40">
@@ -105,9 +113,17 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* 하단 */}
-      <div className="px-6 py-5">
-        <p className="text-[11px] text-slate-300 tracking-wide uppercase font-medium">v0.1.0</p>
+      {/* 하단 - 로그아웃 */}
+      <div className="px-3 py-4 border-t border-slate-100">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13.5px] font-medium text-slate-400 hover:bg-slate-50 hover:text-slate-700 transition-all duration-150"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-[18px] h-[18px] text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          로그아웃
+        </button>
       </div>
     </aside>
   );
